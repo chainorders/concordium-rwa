@@ -3,6 +3,13 @@ use concordium_std::*;
 
 use super::{error::*, state::State, types::*};
 
+#[receive(
+    contract = "rwa_security_nft",
+    name = "balanceOf",
+    parameter = "BalanceOfQueryParams<TokenId>",
+    return_value = "BalanceOfQueryResponse<TokenAmount>",
+    error = "super::error::Error"
+)]
 pub fn balance_of(
     ctx: &ReceiveContext,
     host: &Host<State>,

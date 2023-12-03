@@ -11,7 +11,8 @@ use super::{
     contract = "rwa_security_nft",
     name = "tokenMetadata",
     parameter = "TokenMetadataQueryParams<TokenId>",
-    return_value = "TokenMetadataQueryResponse"
+    return_value = "TokenMetadataQueryResponse",
+    error = "super::error::Error"
 )]
 pub fn token_metadata(
     ctx: &ReceiveContext,

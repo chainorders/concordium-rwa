@@ -2,23 +2,34 @@ use concordium_std::*;
 
 use super::{error::*, event::*, state::State, types::*};
 
-#[receive(contract = "rwa_security_nft", name = "is_agent", parameter = "Address")]
+#[receive(
+    contract = "rwa_security_nft",
+    name = "isAgent",
+    parameter = "Address",
+    error = "super::error::Error"
+)]
 pub fn is_agent(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<bool> {
     let address: Address = ctx.parameter_cursor().get()?;
     Ok(host.state.is_agent(&address))
 }
 
-#[receive(contract = "rwa_security_nft", name = "agents", return_value = "Vec<Address>")]
+#[receive(
+    contract = "rwa_security_nft",
+    name = "agents",
+    return_value = "Vec<Address>",
+    error = "super::error::Error"
+)]
 pub fn agents(_ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<Vec<Address>> {
     Ok(host.state.get_agents())
 }
 
 #[receive(
     contract = "rwa_security_nft",
-    name = "add_agent",
+    name = "addAgent",
     mutable,
     enable_logger,
-    parameter = "Address"
+    parameter = "Address",
+    error = "super::error::Error"
 )]
 pub fn add_agent(
     ctx: &ReceiveContext,
@@ -35,10 +46,11 @@ pub fn add_agent(
 
 #[receive(
     contract = "rwa_security_nft",
-    name = "remove_agent",
+    name = "removeAgent",
     mutable,
     enable_logger,
-    parameter = "Address"
+    parameter = "Address",
+    error = "super::error::Error"
 )]
 pub fn remove_agent(
     ctx: &ReceiveContext,

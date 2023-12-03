@@ -1,12 +1,12 @@
 use concordium_std::*;
 
-use super::state::State;
+use super::{state::State, types::ContractResult};
 
 #[derive(Serialize, SchemaType)]
 pub struct InitParam {
     pub identity_registry: ContractAddress,
-    pub compliance:        ContractAddress,
-    pub sponsors:          Vec<ContractAddress>,
+    pub compliance: ContractAddress,
+    pub sponsors: Vec<ContractAddress>,
 }
 
 #[init(
@@ -27,4 +27,17 @@ pub fn init(ctx: &InitContext, state_builder: &mut StateBuilder) -> InitResult<S
         vec![owner],
         state_builder,
     ))
+}
+
+#[receive(contract = "rwa_security_nft", name = "identityRegistry")]
+pub fn identity_registry(
+    _: &ReceiveContext,
+    host: &Host<State>,
+) -> ContractResult<ContractAddress> {
+    Ok(host.state().get_identity_registry())
+}
+
+#[receive(contract = "rwa_security_nft", name = "compliance")]
+pub fn compliance(_: &ReceiveContext, host: &Host<State>) -> ContractResult<ContractAddress> {
+    Ok(host.state().get_compliance())
 }

@@ -31,7 +31,8 @@ pub struct FrozenResponse<T: IsTokenAmount> {
     name = "freeze",
     mutable,
     enable_logger,
-    parameter = "FreezeParams<TokenId, TokenAmount>"
+    parameter = "FreezeParams<TokenId, TokenAmount>",
+    error = "super::error::Error"
 )]
 pub fn freeze(
     ctx: &ReceiveContext,
@@ -68,7 +69,8 @@ pub fn freeze(
     name = "unFreeze",
     mutable,
     enable_logger,
-    parameter = "FreezeParams<TokenId, TokenAmount>"
+    parameter = "FreezeParams<TokenId, TokenAmount>",
+    error = "super::error::Error"
 )]
 pub fn un_freeze(
     ctx: &ReceiveContext,
@@ -104,7 +106,8 @@ pub fn un_freeze(
     contract = "rwa_security_nft",
     name = "frozen",
     parameter = "FrozenParams<TokenId>",
-    return_value = "FrozenResponse<TokenAmount>"
+    return_value = "FrozenResponse<TokenAmount>",
+    error = "super::error::Error"
 )]
 pub fn frozen(
     ctx: &ReceiveContext,

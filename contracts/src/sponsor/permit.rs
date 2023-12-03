@@ -11,7 +11,8 @@ use super::{error::Error, event::*, state::State, types::ContractResult};
     crypto_primitives,
     mutable,
     enable_logger,
-    payable
+    payable,
+    error = "Error"
 )]
 fn permit(
     ctx: &ReceiveContext,

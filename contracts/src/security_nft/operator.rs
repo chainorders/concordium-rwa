@@ -8,7 +8,8 @@ use super::{event::Event, state::State, types::ContractResult};
     name = "updateOperator",
     mutable,
     enable_logger,
-    parameter = "UpdateOperatorParams"
+    parameter = "UpdateOperatorParams",
+    error = "super::error::Error"
 )]
 pub fn update_operator(
     ctx: &ReceiveContext,
@@ -45,7 +46,8 @@ pub fn update_operator(
     contract = "rwa_security_nft",
     name = "operatorOf",
     parameter = "OperatorOfQueryParams",
-    return_value = "OperatorOfQueryResponse"
+    return_value = "OperatorOfQueryResponse",
+    error = "super::error::Error"
 )]
 pub fn operator_of(
     ctx: &ReceiveContext,

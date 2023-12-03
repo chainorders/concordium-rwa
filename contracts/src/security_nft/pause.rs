@@ -18,7 +18,8 @@ pub struct IsPausedResponse {
     name = "pause",
     mutable,
     enable_logger,
-    parameter = "PauseParams<TokenId>"
+    parameter = "PauseParams<TokenId>",
+    error = "super::error::Error"
 )]
 pub fn pause(
     ctx: &ReceiveContext,
@@ -47,7 +48,8 @@ pub fn pause(
     name = "unpause",
     mutable,
     enable_logger,
-    parameter = "PauseParams<TokenId>"
+    parameter = "PauseParams<TokenId>",
+    error = "super::error::Error"
 )]
 pub fn unpause(
     ctx: &ReceiveContext,
@@ -71,7 +73,12 @@ pub fn unpause(
     Ok(())
 }
 
-#[receive(contract = "rwa_security_nft", name = "isPaused", parameter = "PauseParams<TokenId>")]
+#[receive(
+    contract = "rwa_security_nft",
+    name = "isPaused",
+    parameter = "PauseParams<TokenId>",
+    error = "super::error::Error"
+)]
 pub fn is_paused(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<IsPausedResponse> {
     let PauseParams {
         tokens,
