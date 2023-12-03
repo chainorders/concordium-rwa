@@ -1,0 +1,9 @@
+{
+	"name": "contracts",
+	"version": "1.0.0",
+	"main": "index.js",
+	"license": "MIT",
+	"scripts": {
+		"build": "cargo concordium build --out ./module.wasm --schema-embed --schema-out ./schema.bin"
+	}
+}
