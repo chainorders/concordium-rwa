@@ -13,7 +13,7 @@ pub struct InitParam {
     contract = "rwa_security_nft",
     event = "super::event::Event",
     error = "super::error::Error",
-    parameter = "InitParams"
+    parameter = "InitParam"
 )]
 pub fn init(ctx: &InitContext, state_builder: &mut StateBuilder) -> InitResult<State> {
     let params: InitParam = ctx.parameter_cursor().get()?;
