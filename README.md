@@ -120,4 +120,4 @@ A MC should be added as a valid receiver of the Token in STC. Since MC holds the
 
 ### Fractionalized Token Contract (FTC)
 
-A FTC should be added as a valid receiver of the token in STC. Since FTC holds the token in custody while providing the fractionalized tokens
+A FTC should be added as a valid receiver of the token in STC. Since FTC holds the token in custody while providing the fractionalized tokens. FTC is also CIS2 and SEC
