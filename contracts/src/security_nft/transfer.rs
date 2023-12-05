@@ -93,3 +93,77 @@ pub fn transfer(
 
     Ok(())
 }
+
+// Transfer without compliance check
+// Only allowed by the Agent of the Contract
+#[receive(
+    contract = "rwa_security_nft",
+    name = "forcedTransfer",
+    enable_logger,
+    mutable,
+    parameter = "TransferParams<TokenId, TokenAmount>",
+    error = "super::error::Error"
+)]
+pub fn forced_transfer(
+    ctx: &ReceiveContext,
+    host: &mut Host<State>,
+    logger: &mut Logger,
+) -> ContractResult<()> {
+    let TransferParams(transfers): TransferParams<TokenId, TokenAmount> =
+        ctx.parameter_cursor().get()?;
+
+    let state = host.state();
+    let tir = IdentityRegistryClient::new(state.get_identity_registry());
+
+    for Transfer {
+        to,
+        from,
+        amount,
+        token_id,
+        data,
+    } in transfers
+    {
+        ensure!(amount.eq(&TOKEN_AMOUNT_1), Error::Custom(CustomContractError::InvalidAmount));
+
+        let state = host.state_mut();
+        ensure!(state.is_agent(&ctx.sender()), Error::Unauthorized);
+        ensure!(
+            !state.is_frozen(&from, &token_id),
+            Error::Custom(CustomContractError::FrozenWallet)
+        );
+        ensure!(!state.is_paused(&token_id), Error::Custom(CustomContractError::PausedToken));
+        ensure!(state.has_balance(&token_id, &from), Error::InsufficientFunds);
+        // The supposed owner of the Token should be verified to hold the token
+        // This includes both KYC verification and VC verification
+        ensure!(
+            tir.is_verified(to.address())?,
+            Error::Custom(CustomContractError::UnVerifiedIdentity)
+        );
+        state.transfer(token_id, to.address());
+
+        logger.log(&Event::Cis2(concordium_cis2::Cis2Event::Transfer(TransferEvent {
+            amount,
+            token_id,
+            from,
+            to: to.address(),
+        })))?;
+
+        if let Receiver::Contract(to_contract, entrypoint) = to {
+            let parameter = OnReceivingCis2Params {
+                token_id,
+                amount,
+                from,
+                data,
+            };
+
+            host.invoke_contract(
+                &to_contract,
+                &parameter,
+                entrypoint.as_entrypoint_name(),
+                Amount::zero(),
+            )?;
+        }
+    }
+
+    Ok(())
+}
