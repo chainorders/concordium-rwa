@@ -10,6 +10,8 @@ use super::{state::State, types::ContractResult};
 
 const SUPPORTS_STANDARDS: [StandardIdentifier<'static>; 2] =
     [CIS0_STANDARD_IDENTIFIER, CIS2_STANDARD_IDENTIFIER];
+
+/// Determines whether the contract supports a specific concordium standard.
 #[receive(
     contract = "rwa_security_nft",
     name = "supports",

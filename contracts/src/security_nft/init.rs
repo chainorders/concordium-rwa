@@ -29,7 +29,11 @@ pub fn init(ctx: &InitContext, state_builder: &mut StateBuilder) -> InitResult<S
     ))
 }
 
-#[receive(contract = "rwa_security_nft", name = "identityRegistry")]
+#[receive(
+    contract = "rwa_security_nft",
+    name = "identityRegistry",
+    return_value = "ContractAddress"
+)]
 pub fn identity_registry(
     _: &ReceiveContext,
     host: &Host<State>,
@@ -37,7 +41,7 @@ pub fn identity_registry(
     Ok(host.state().get_identity_registry())
 }
 
-#[receive(contract = "rwa_security_nft", name = "compliance")]
+#[receive(contract = "rwa_security_nft", name = "compliance", return_value = "ContractAddress")]
 pub fn compliance(_: &ReceiveContext, host: &Host<State>) -> ContractResult<ContractAddress> {
     Ok(host.state().get_compliance())
 }

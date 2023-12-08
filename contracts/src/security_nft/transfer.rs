@@ -2,11 +2,14 @@ use concordium_cis2::{OnReceivingCis2Params, Receiver, Transfer, TransferEvent, 
 use concordium_std::*;
 
 use crate::utils::{
-    compliance_client::ComplianceClient, identity_registry_client::IdentityRegistryClient,
+    agent_state::HasAgentState, compliance_client::ComplianceClient,
+    identity_registry_client::IdentityRegistryClient, operators_state::HasOperatorsState,
+    tokens_state::HasTokensState,
 };
 
 use super::{error::*, event::*, state::State, types::*};
 
+/// Compliant Transfers ownership of an NFT from one verified account to another verified account.
 #[receive(
     contract = "rwa_security_nft",
     name = "transfer",
@@ -39,12 +42,11 @@ pub fn transfer(
         ensure!(amount.eq(&TOKEN_AMOUNT_1), Error::Custom(CustomContractError::InvalidAmount));
 
         let state = host.state_mut();
-
         let is_authorized =
             // Sender is the Owner of the token
             from.eq(&sender)
             // Sender is an operator of the owner
-            || state.is_operator(&sender, &from)
+            || state.operators_state().is_operator(&from, &sender)
             // Sender is the sponsor (CIS3) of the transaction 
             || state.is_sponsor(&sender);
 
@@ -54,7 +56,10 @@ pub fn transfer(
             Error::Custom(CustomContractError::FrozenWallet)
         );
         ensure!(!state.is_paused(&token_id), Error::Custom(CustomContractError::PausedToken));
-        ensure!(state.has_balance(&token_id, &from), Error::InsufficientFunds);
+        ensure!(
+            state.tokens_state().balance_of(&token_id, &from)?.ge(&amount),
+            Error::InsufficientFunds
+        );
         // The supposed owner of the Token should be verified to hold the token
         // This includes both KYC verification and VC verification
         ensure!(
@@ -64,8 +69,7 @@ pub fn transfer(
         // The transfer of the ownership of the token should be compliant.
         // This method will throw error on an non-compliant transfer
         compliance.transferred(token_id, from, to.address(), amount)?;
-
-        state.transfer(token_id, to.address());
+        state.tokens_state_mut().transfer(token_id, from, to.address(), amount)?;
 
         logger.log(&Event::Cis2(concordium_cis2::Cis2Event::Transfer(TransferEvent {
             amount,
@@ -94,8 +98,7 @@ pub fn transfer(
     Ok(())
 }
 
-// Transfer without compliance check
-// Only allowed by the Agent of the Contract
+/// Transfers ownership of an NFT from one verified account to another verified account. Does not check for compliance.
 #[receive(
     contract = "rwa_security_nft",
     name = "forcedTransfer",
@@ -126,20 +129,23 @@ pub fn forced_transfer(
         ensure!(amount.eq(&TOKEN_AMOUNT_1), Error::Custom(CustomContractError::InvalidAmount));
 
         let state = host.state_mut();
-        ensure!(state.is_agent(&ctx.sender()), Error::Unauthorized);
+        ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
         ensure!(
             !state.is_frozen(&from, &token_id),
             Error::Custom(CustomContractError::FrozenWallet)
         );
         ensure!(!state.is_paused(&token_id), Error::Custom(CustomContractError::PausedToken));
-        ensure!(state.has_balance(&token_id, &from), Error::InsufficientFunds);
+        ensure!(
+            state.tokens_state().balance_of(&token_id, &from)?.ge(&amount),
+            Error::InsufficientFunds
+        );
         // The supposed owner of the Token should be verified to hold the token
         // This includes both KYC verification and VC verification
         ensure!(
             tir.is_verified(to.address())?,
             Error::Custom(CustomContractError::UnVerifiedIdentity)
         );
-        state.transfer(token_id, to.address());
+        state.tokens_state_mut().transfer(token_id, from, to.address(), amount);
 
         logger.log(&Event::Cis2(concordium_cis2::Cis2Event::Transfer(TransferEvent {
             amount,

@@ -1,19 +1,16 @@
-use concordium_std::*;
+use crate::utils::{agent_state::{AgentState, HasAgentState}, operators_state::{OperatorsState, HasOperatorsState}, tokens_state::{TokensState, HasTokensState}};
 
-use super::types::TokenId;
+use super::types::{TokenId, TokenAmount};
+use concordium_std::*;
 
 #[derive(Serialize)]
 pub struct TokenState {
-    owner:        Address,
-    metadata_url: MetadataUrl,
-    is_paused:    bool,
+    is_paused: bool,
 }
 
 impl TokenState {
-    fn new(owner: Address, metadata_url: MetadataUrl) -> TokenState {
+    fn new() -> TokenState {
         TokenState {
-            owner,
-            metadata_url,
             is_paused: false,
         }
     }
@@ -22,14 +19,12 @@ impl TokenState {
 #[derive(Serial, DeserialWithState)]
 #[concordium(state_parameter = "S")]
 struct AddressState<S = StateApi> {
-    operators:     StateSet<Address, S>,
     frozen_tokens: StateSet<TokenId, S>,
 }
 
 impl AddressState {
     pub fn new(state_builder: &mut StateBuilder) -> AddressState {
         AddressState {
-            operators:     state_builder.new_set(),
             frozen_tokens: state_builder.new_set(),
         }
     }
@@ -38,13 +33,16 @@ impl AddressState {
 #[derive(Serial, DeserialWithState)]
 #[concordium(state_parameter = "S")]
 pub struct State<S = StateApi> {
+    agent_state: AgentState<S>,
+    operators_state: OperatorsState<S>,
+    tokens_state: TokensState<TokenId, TokenAmount, S>,
+
+    sponsors: StateSet<ContractAddress, S>,
     identity_registry: ContractAddress,
-    compliance:        ContractAddress,
-    sponsors:          StateSet<ContractAddress, S>,
-    tokens:            StateMap<TokenId, TokenState, S>,
-    addresses:         StateMap<Address, AddressState<S>, S>,
-    token_id:          TokenId,
-    agents:            StateSet<Address, S>,
+    compliance: ContractAddress,
+    tokens: StateMap<TokenId, TokenState, S>,
+    addresses: StateMap<Address, AddressState<S>, S>,
+    token_id: TokenId,
 }
 
 impl State {
@@ -56,18 +54,17 @@ impl State {
         state_builder: &mut StateBuilder,
     ) -> Self {
         let mut state = State {
+            agent_state: AgentState::new(agents, state_builder),
+            operators_state: OperatorsState::new(state_builder),
+            tokens_state: TokensState::new(state_builder), 
+
             identity_registry,
             compliance,
             sponsors: state_builder.new_set(),
             tokens: state_builder.new_map(),
             token_id: 0.into(),
-            agents: state_builder.new_set(),
             addresses: state_builder.new_map(),
         };
-
-        for agent in agents {
-            state.add_agent(agent);
-        }
 
         for sponsor in sponsors {
             state.sponsors.insert(sponsor);
@@ -76,7 +73,9 @@ impl State {
         state
     }
 
-    pub fn sponsors(&self) -> Vec<ContractAddress> { self.sponsors.iter().map(|s| *s).collect() }
+    pub fn sponsors(&self) -> Vec<ContractAddress> {
+        self.sponsors.iter().map(|s| *s).collect()
+    }
 
     pub fn set_pause(&mut self, token_id: TokenId, pause: bool) {
         self.tokens.entry(token_id).and_modify(|t| t.is_paused = pause);
@@ -115,73 +114,49 @@ impl State {
         }
     }
 
-    pub fn is_operator(&self, operator: &Address, address: &Address) -> bool {
-        self.addresses.get(address).map(|s| s.operators.contains(operator)).unwrap_or(false)
+    pub fn get_identity_registry(&self) -> ContractAddress {
+        self.identity_registry
     }
 
-    pub fn set_operator(
-        &mut self,
-        owner: Address,
-        operator: Address,
-        is_set: bool,
-        state_builder: &mut StateBuilder,
-    ) {
-        self.addresses.entry(owner).or_insert(AddressState::new(state_builder)).modify(|s| {
-            if is_set {
-                s.operators.insert(operator)
-            } else {
-                s.operators.remove(&operator)
-            }
-        });
+    pub fn get_compliance(&self) -> ContractAddress {
+        self.compliance
     }
 
-    pub fn get_identity_registry(&self) -> ContractAddress { self.identity_registry }
-
-    pub fn get_compliance(&self) -> ContractAddress { self.compliance }
-
-    fn get_token_id(&self) -> TokenId { self.token_id }
-
-    pub fn has_balance(&self, token_id: &TokenId, address: &Address) -> bool {
-        match self.tokens.get(token_id) {
-            Some(entry) => entry.owner.eq(address),
-            None => false,
-        }
+    pub fn get_token_id(&self) -> TokenId {
+        self.token_id
     }
 
-    fn increment_token_id(&mut self) { self.token_id.0 += 1; }
+    pub fn increment_token_id(&mut self) {
+        self.token_id.0 += 1;
+    }
+}
 
-    fn add_token(
-        &mut self,
-        owner: Address,
-        token_id: TokenId,
-        metadata_url: impl Into<MetadataUrl>,
-    ) {
-        self.tokens.entry(token_id).or_insert_with(|| TokenState::new(owner, metadata_url.into()));
+impl HasAgentState for State {
+    fn agent_state(&self) -> &AgentState {
+        &self.agent_state
     }
 
-    pub fn mint(&mut self, owner: Address, metadata_url: impl Into<MetadataUrl>) -> TokenId {
-        let token_id = self.get_token_id();
-        self.add_token(owner, token_id, metadata_url);
-        self.increment_token_id();
+    fn agent_state_mut(&mut self) -> &mut AgentState {
+        &mut self.agent_state
+    }
+}
 
-        token_id
+impl HasOperatorsState for State {
+    fn operators_state(&self) -> &OperatorsState {
+        &self.operators_state
     }
 
-    pub fn token_exists(&self, token_id: &TokenId) -> bool { self.tokens.get(token_id).is_some() }
+    fn operators_state_mut(&mut self) -> &mut OperatorsState {
+        &mut self.operators_state
+    }
+}
 
-    pub fn transfer(&mut self, token_id: TokenId, to: Address) {
-        self.tokens.entry(token_id).and_modify(|e| e.owner = to);
+impl HasTokensState<TokenId, TokenAmount> for State {
+    fn tokens_state(&self) -> &TokensState<TokenId, TokenAmount> {
+        &self.tokens_state
     }
 
-    pub fn is_agent(&self, address: &Address) -> bool { self.agents.contains(address) }
-
-    pub fn add_agent(&mut self, address: Address) { self.agents.insert(address); }
-
-    pub fn remove_agent(&mut self, address: &Address) { self.agents.remove(address); }
-
-    pub fn get_agents(&self) -> Vec<Address> { self.agents.iter().map(|a| *a).collect() }
-
-    pub fn token_metadata(&self, token_id: &TokenId) -> Option<MetadataUrl> {
-        self.tokens.get(token_id).map(|t| t.metadata_url.clone())
+    fn tokens_state_mut(&mut self) -> &mut TokensState<TokenId, TokenAmount> {
+        &mut self.tokens_state
     }
 }

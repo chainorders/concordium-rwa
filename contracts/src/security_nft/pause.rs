@@ -1,6 +1,8 @@
 use concordium_cis2::IsTokenId;
 use concordium_std::*;
 
+use crate::utils::{agent_state::HasAgentState, tokens_state::HasTokensState};
+
 use super::{error::*, event::*, state::State, types::*};
 
 #[derive(Serialize, SchemaType)]
@@ -13,6 +15,7 @@ pub struct IsPausedResponse {
     tokens: Vec<bool>,
 }
 
+/// Pauses the given tokenIds.
 #[receive(
     contract = "rwa_security_nft",
     name = "pause",
@@ -27,13 +30,13 @@ pub fn pause(
     logger: &mut Logger,
 ) -> ContractResult<()> {
     let state = host.state_mut();
-    ensure!(state.is_agent(&ctx.sender()), Error::Unauthorized);
+    ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
 
     let PauseParams {
         tokens,
     }: PauseParams<TokenId> = ctx.parameter_cursor().get()?;
     for token_id in tokens {
-        ensure!(state.token_exists(&token_id), Error::InvalidTokenId);
+        ensure!(state.tokens_state().has_token(&token_id), Error::InvalidTokenId);
         state.set_pause(token_id, true);
         logger.log(&Event::Paused(Paused {
             token_id,
@@ -43,6 +46,7 @@ pub fn pause(
     Ok(())
 }
 
+/// Unpauses the given tokenIds.
 #[receive(
     contract = "rwa_security_nft",
     name = "unpause",
@@ -57,7 +61,7 @@ pub fn unpause(
     logger: &mut Logger,
 ) -> ContractResult<()> {
     let state = host.state_mut();
-    ensure!(state.is_agent(&ctx.sender()), Error::Unauthorized);
+    ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
 
     let PauseParams {
         tokens,
@@ -73,6 +77,7 @@ pub fn unpause(
     Ok(())
 }
 
+/// Returns true if the given tokenIds are paused.
 #[receive(
     contract = "rwa_security_nft",
     name = "isPaused",
@@ -89,8 +94,9 @@ pub fn is_paused(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<IsP
     };
 
     let state = host.state();
+    let tokens_state = state.tokens_state();
     for token_id in tokens {
-        ensure!(state.token_exists(&token_id), Error::InvalidTokenId);
+        ensure!(tokens_state.has_token(&token_id), Error::InvalidTokenId);
         res.tokens.push(state.is_paused(&token_id))
     }
 

@@ -1,8 +1,11 @@
 use concordium_cis2::*;
 use concordium_std::*;
 
+use crate::utils::operators_state::HasOperatorsState;
+
 use super::{event::Event, state::State, types::ContractResult};
 
+/// Updates the Operator of the given Address
 #[receive(
     contract = "rwa_security_nft",
     name = "updateOperator",
@@ -20,6 +23,7 @@ pub fn update_operator(
         0: updates,
     }: UpdateOperatorParams = ctx.parameter_cursor().get()?;
     let (state, state_builder) = host.state_and_builder();
+    let state = state.operators_state_mut();
     let owner = ctx.sender();
 
     for UpdateOperator {
@@ -28,8 +32,8 @@ pub fn update_operator(
     } in updates
     {
         match update {
-            OperatorUpdate::Remove => state.set_operator(owner, operator, false, state_builder),
-            OperatorUpdate::Add => state.set_operator(owner, operator, true, state_builder),
+            OperatorUpdate::Add => state.add_operator(owner, operator, state_builder),
+            OperatorUpdate::Remove => state.remove_operator(owner, &operator),
         }
 
         logger.log(&Event::Cis2(Cis2Event::UpdateOperator(UpdateOperatorEvent {
@@ -42,6 +46,7 @@ pub fn update_operator(
     Ok(())
 }
 
+/// Returns true if the given address is an operator for the given owner.
 #[receive(
     contract = "rwa_security_nft",
     name = "operatorOf",
@@ -57,6 +62,7 @@ pub fn operator_of(
         queries,
     }: OperatorOfQueryParams = ctx.parameter_cursor().get()?;
     let state = host.state();
+    let state = state.operators_state();
 
     let mut res: OperatorOfQueryResponse =
         OperatorOfQueryResponse(Vec::with_capacity(queries.len()));

@@ -1,12 +1,14 @@
 use concordium_cis2::{TokenMetadataQueryParams, TokenMetadataQueryResponse};
 use concordium_std::*;
 
+use crate::utils::tokens_state::HasTokensState;
+
 use super::{
-    error::Error,
     state::State,
     types::{ContractResult, TokenId},
 };
 
+/// Retrieves the metadata for a token.
 #[receive(
     contract = "rwa_security_nft",
     name = "tokenMetadata",
@@ -22,14 +24,8 @@ pub fn token_metadata(
         queries,
     }: TokenMetadataQueryParams<TokenId> = ctx.parameter_cursor().get()?;
 
-    let state = host.state();
-    let mut res = Vec::with_capacity(queries.len());
-    for token_id in queries {
-        match state.token_metadata(&token_id) {
-            Some(metadata_url) => res.push(metadata_url),
-            None => bail!(Error::InvalidTokenId),
-        }
-    }
+    let state = host.state().tokens_state();
+    let res: Result<Vec<_>, _> = queries.iter().map(|q| state.token_metadata_url(&q)).collect();
 
-    Ok(TokenMetadataQueryResponse(res))
+    Ok(TokenMetadataQueryResponse(res?))
 }

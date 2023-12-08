@@ -1,6 +1,8 @@
 use concordium_cis2::{TokenAmountU8, TokenIdU8};
 use concordium_std::*;
 
+use crate::utils::tokens_state::IsTokenAmount;
+
 use super::error::Error;
 
 pub type TokenId = TokenIdU8;
@@ -31,5 +33,15 @@ impl From<ContractMetadataUrl> for MetadataUrl {
                 }
             },
         }
+    }
+}
+
+impl IsTokenAmount for TokenAmount {
+    fn zero() -> Self {
+        TOKEN_AMOUNT_0
+    }
+
+    fn max_value() -> Self {
+        TokenAmountU8(u8::MAX)
     }
 }

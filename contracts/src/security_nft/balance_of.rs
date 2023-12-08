@@ -1,7 +1,9 @@
 use concordium_cis2::*;
 use concordium_std::*;
 
-use super::{error::*, state::State, types::*};
+use crate::utils::tokens_state::HasTokensState;
+
+use super::{state::State, types::*};
 
 #[receive(
     contract = "rwa_security_nft",
@@ -10,6 +12,7 @@ use super::{error::*, state::State, types::*};
     return_value = "BalanceOfQueryResponse<TokenAmount>",
     error = "super::error::Error"
 )]
+/// Returns the balance of the given token for the given addresses.
 pub fn balance_of(
     ctx: &ReceiveContext,
     host: &Host<State>,
@@ -17,22 +20,9 @@ pub fn balance_of(
     let BalanceOfQueryParams {
         queries,
     }: BalanceOfQueryParams<TokenId> = ctx.parameter_cursor().get()?;
-    let state = host.state();
+    let state = host.state().tokens_state();
+    let res: Result<Vec<_>, _> =
+        queries.iter().map(|q| state.balance_of(&q.token_id, &q.address)).collect();
 
-    let mut res = Vec::with_capacity(queries.len());
-    for BalanceOfQuery {
-        token_id,
-        address,
-    } in queries
-    {
-        ensure!(state.token_exists(&token_id), Error::InvalidTokenId);
-
-        if state.has_balance(&token_id, &address) {
-            res.push(TOKEN_AMOUNT_1)
-        } else {
-            res.push(TOKEN_AMOUNT_0)
-        }
-    }
-
-    Ok(BalanceOfQueryResponse(res))
+    Ok(BalanceOfQueryResponse(res?))
 }

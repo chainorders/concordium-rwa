@@ -3,7 +3,10 @@ use concordium_cis2::{
 };
 use concordium_std::*;
 
-use crate::utils::identity_registry_client::IdentityRegistryClient;
+use crate::utils::{
+    agent_state::HasAgentState, identity_registry_client::IdentityRegistryClient,
+    tokens_state::HasTokensState,
+};
 
 use super::{error::*, event::*, state::State, types::*};
 
@@ -14,10 +17,11 @@ pub struct MintParam {
 
 #[derive(Serialize, SchemaType)]
 pub struct MintParams {
-    pub owner:  Receiver,
+    pub owner: Receiver,
     pub tokens: Vec<MintParam>,
 }
 
+/// Mints the given amount of given tokenIds for the given address.
 #[receive(
     contract = "rwa_security_nft",
     name = "mint",
@@ -33,8 +37,8 @@ pub fn mint(
 ) -> ContractResult<()> {
     let state = host.state_mut();
 
-    // Sender of this transaction should be a Trusted Agent
-    ensure!(state.is_agent(&ctx.sender()), Error::Unauthorized);
+    // Sender of this transaction should be registered as an agent in the contract
+    ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
 
     let params: MintParams = ctx.parameter_cursor().get()?;
     let owner_address = params.owner.address();
@@ -51,8 +55,20 @@ pub fn mint(
         metadata_url,
     } in params.tokens
     {
-        let state = host.state_mut();
-        let token_id = state.mint(owner_address, metadata_url.clone());
+        let metadata_url: MetadataUrl = metadata_url.into();
+        let (state, state_builder) = host.state_and_builder();
+        let token_id = {
+            let token_id = state.get_token_id();
+            state.tokens_state_mut().add_token(
+                token_id,
+                metadata_url.to_owned(),
+                vec![(owner_address, 1.into())],
+                state_builder,
+            )?;
+            state.increment_token_id();
+
+            token_id
+        };
 
         logger.log(&Event::Cis2(Cis2Event::Mint(MintEvent {
             token_id,
@@ -61,7 +77,7 @@ pub fn mint(
         })))?;
         logger.log(&Event::Cis2(Cis2Event::TokenMetadata(TokenMetadataEvent {
             token_id,
-            metadata_url: metadata_url.into(),
+            metadata_url,
         })))?;
 
         // If the receiver is a contract: invoke the receive hook function.

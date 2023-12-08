@@ -1,23 +1,25 @@
 use concordium_cis2::{IsTokenAmount, IsTokenId};
 use concordium_std::*;
 
+use crate::utils::{agent_state::HasAgentState, tokens_state::HasTokensState};
+
 use super::{error::*, event::*, state::State, types::*};
 
 #[derive(Serialize, SchemaType)]
 pub struct FreezeParam<T: IsTokenId, A: IsTokenAmount> {
-    pub token_id:     T,
+    pub token_id: T,
     pub token_amount: A,
 }
 
 #[derive(Serialize, SchemaType)]
 pub struct FreezeParams<T: IsTokenId, A: IsTokenAmount> {
-    pub owner:  Address,
+    pub owner: Address,
     pub tokens: Vec<FreezeParam<T, A>>,
 }
 
 #[derive(Serialize, SchemaType)]
 pub struct FrozenParams<T: IsTokenId> {
-    pub owner:  Address,
+    pub owner: Address,
     pub tokens: Vec<T>,
 }
 
@@ -26,6 +28,7 @@ pub struct FrozenResponse<T: IsTokenAmount> {
     pub tokens: Vec<T>,
 }
 
+/// Freezes the given amount of give tokenIds for the given address.
 #[receive(
     contract = "rwa_security_nft",
     name = "freeze",
@@ -41,7 +44,7 @@ pub fn freeze(
 ) -> ContractResult<()> {
     let (state, state_builder) = host.state_and_builder();
     // Sender of this transaction should be a Trusted Agent
-    ensure!(state.is_agent(&ctx.sender()), Error::Unauthorized);
+    ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
 
     let FreezeParams {
         owner,
@@ -52,18 +55,23 @@ pub fn freeze(
             token.token_amount.eq(&TOKEN_AMOUNT_1),
             Error::Custom(CustomContractError::InvalidAmount)
         );
-        ensure!(state.has_balance(&token.token_id, &owner), Error::InsufficientFunds);
+        ensure!(
+            state.tokens_state().balance_of(&token.token_id, &owner)?.ge(&token.token_amount),
+            Error::InsufficientFunds
+        );
+
         state.freeze(owner, token.token_id, state_builder);
         logger.log(&Event::TokensFrozen(TokensFrozen {
             token_id: token.token_id,
-            amount:   token.token_amount,
-            address:  owner,
+            amount: token.token_amount,
+            address: owner,
         }))?;
     }
 
     Ok(())
 }
 
+/// Unfreezes the given amount of give tokenIds for the given address.
 #[receive(
     contract = "rwa_security_nft",
     name = "unFreeze",
@@ -79,7 +87,7 @@ pub fn un_freeze(
 ) -> ContractResult<()> {
     let state = host.state_mut();
     // Sender of this transaction should be a Trusted Agent
-    ensure!(state.is_agent(&ctx.sender()), Error::Unauthorized);
+    ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
 
     let FreezeParams {
         owner,
@@ -94,14 +102,15 @@ pub fn un_freeze(
         state.un_freeze(owner, token.token_id);
         logger.log(&Event::TokensUnFrozen(TokensFrozen {
             token_id: token.token_id,
-            amount:   token.token_amount,
-            address:  owner,
+            amount: token.token_amount,
+            address: owner,
         }))?;
     }
 
     Ok(())
 }
 
+/// Returns the frozen balance of the given token for the given addresses.
 #[receive(
     contract = "rwa_security_nft",
     name = "frozen",
@@ -115,7 +124,8 @@ pub fn frozen(
 ) -> ContractResult<FrozenResponse<TokenAmount>> {
     let state = host.state();
     // Sender of this transaction should be a Trusted Agent
-    ensure!(state.is_agent(&ctx.sender()), Error::Unauthorized);
+    ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
+    let tokens_state = state.tokens_state();
 
     let FrozenParams {
         owner,
@@ -126,7 +136,7 @@ pub fn frozen(
     };
 
     for token_id in token_ids {
-        ensure!(state.token_exists(&token_id), Error::InvalidTokenId);
+        ensure!(tokens_state.has_token(&token_id), Error::InvalidTokenId);
 
         if state.is_frozen(&owner, &token_id) {
             res.tokens.push(TOKEN_AMOUNT_1)
