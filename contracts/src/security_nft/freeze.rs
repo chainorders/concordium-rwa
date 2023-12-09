@@ -1,7 +1,13 @@
+use std::ops::Sub;
+
 use concordium_cis2::{IsTokenAmount, IsTokenId};
 use concordium_std::*;
 
-use crate::utils::{agent_state::HasAgentState, tokens_state::HasTokensState};
+use crate::utils::{
+    agents_state::HasAgentsState,
+    tokens_security_state::HasTokensSecurityState,
+    tokens_state::{HasTokensState, TokenStateResult},
+};
 
 use super::{error::*, event::*, state::State, types::*};
 
@@ -51,16 +57,18 @@ pub fn freeze(
         tokens,
     }: FreezeParams<TokenId, TokenAmount> = ctx.parameter_cursor().get()?;
     for token in tokens {
-        ensure!(
-            token.token_amount.eq(&TOKEN_AMOUNT_1),
-            Error::Custom(CustomContractError::InvalidAmount)
-        );
-        ensure!(
-            state.tokens_state().balance_of(&token.token_id, &owner)?.ge(&token.token_amount),
-            Error::InsufficientFunds
-        );
+        let un_frozen_balance = state
+            .tokens_state()
+            .balance_of(&token.token_id, &owner)?
+            .sub(state.security_tokens_state().balance_of_frozen(&token.token_id, &owner));
 
-        state.freeze(owner, token.token_id, state_builder);
+        ensure!(un_frozen_balance.ge(&token.token_amount), Error::InsufficientFunds);
+        state.security_tokens_state_mut().freeze(
+            token.token_id,
+            owner,
+            token.token_amount,
+            state_builder,
+        )?;
         logger.log(&Event::TokensFrozen(TokensFrozen {
             token_id: token.token_id,
             amount: token.token_amount,
@@ -94,12 +102,7 @@ pub fn un_freeze(
         tokens,
     }: FreezeParams<TokenId, TokenAmount> = ctx.parameter_cursor().get()?;
     for token in tokens {
-        ensure!(
-            token.token_amount.eq(&TOKEN_AMOUNT_1),
-            Error::Custom(CustomContractError::InvalidAmount)
-        );
-        ensure!(state.is_frozen(&owner, &token.token_id), Error::InsufficientFunds);
-        state.un_freeze(owner, token.token_id);
+        state.security_tokens_state_mut().un_freeze(token.token_id, owner, token.token_amount)?;
         logger.log(&Event::TokensUnFrozen(TokensFrozen {
             token_id: token.token_id,
             amount: token.token_amount,
@@ -113,37 +116,66 @@ pub fn un_freeze(
 /// Returns the frozen balance of the given token for the given addresses.
 #[receive(
     contract = "rwa_security_nft",
-    name = "frozen",
+    name = "balanceOfFrozen",
     parameter = "FrozenParams<TokenId>",
     return_value = "FrozenResponse<TokenAmount>",
     error = "super::error::Error"
 )]
-pub fn frozen(
+pub fn balance_of_frozen(
     ctx: &ReceiveContext,
     host: &Host<State>,
 ) -> ContractResult<FrozenResponse<TokenAmount>> {
     let state = host.state();
-    // Sender of this transaction should be a Trusted Agent
-    ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
-    let tokens_state = state.tokens_state();
-
     let FrozenParams {
         owner,
         tokens: token_ids,
     }: FrozenParams<TokenId> = ctx.parameter_cursor().get()?;
-    let mut res = FrozenResponse {
-        tokens: Vec::with_capacity(token_ids.len()),
-    };
 
-    for token_id in token_ids {
-        ensure!(tokens_state.has_token(&token_id), Error::InvalidTokenId);
+    let tokens = token_ids
+        .iter()
+        .map(|token_id| {
+            state
+                .tokens_state()
+                .ensure_token_exists(&token_id)
+                .and_then(|_| Ok(state.security_tokens_state().balance_of_frozen(token_id, &owner)))
+        })
+        .collect::<TokenStateResult<Vec<_>>>()?;
 
-        if state.is_frozen(&owner, &token_id) {
-            res.tokens.push(TOKEN_AMOUNT_1)
-        } else {
-            res.tokens.push(TOKEN_AMOUNT_0)
-        }
-    }
+    Ok(FrozenResponse {
+        tokens,
+    })
+}
 
-    Ok(res)
+/// Returns the unfrozen balance of the given token for the given addresses.
+#[receive(
+    contract = "rwa_security_nft",
+    name = "balanceOfUnFrozen",
+    parameter = "FrozenParams<TokenId>",
+    return_value = "FrozenResponse<TokenAmount>",
+    error = "super::error::Error"
+)]
+pub fn balance_of_un_frozen(
+    ctx: &ReceiveContext,
+    host: &Host<State>,
+) -> ContractResult<FrozenResponse<TokenAmount>> {
+    let state = host.state();
+    let FrozenParams {
+        owner,
+        tokens: token_ids,
+    }: FrozenParams<TokenId> = ctx.parameter_cursor().get()?;
+
+    let tokens = token_ids
+        .iter()
+        .map(|token_id| {
+            let un_frozen_balance = state
+                .tokens_state()
+                .balance_of(&token_id, &owner)?
+                .sub(state.security_tokens_state().balance_of_frozen(&token_id, &owner));
+            Ok(un_frozen_balance)
+        })
+        .collect::<TokenStateResult<Vec<_>>>()?;
+
+    Ok(FrozenResponse {
+        tokens,
+    })
 }

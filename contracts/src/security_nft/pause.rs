@@ -1,7 +1,10 @@
 use concordium_cis2::IsTokenId;
 use concordium_std::*;
 
-use crate::utils::{agent_state::HasAgentState, tokens_state::HasTokensState};
+use crate::utils::{
+    agents_state::HasAgentsState, tokens_security_state::HasTokensSecurityState,
+    tokens_state::HasTokensState,
+};
 
 use super::{error::*, event::*, state::State, types::*};
 
@@ -29,15 +32,15 @@ pub fn pause(
     host: &mut Host<State>,
     logger: &mut Logger,
 ) -> ContractResult<()> {
-    let state = host.state_mut();
+    let (state, state_builder) = host.state_and_builder();
     ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
 
     let PauseParams {
         tokens,
     }: PauseParams<TokenId> = ctx.parameter_cursor().get()?;
     for token_id in tokens {
-        ensure!(state.tokens_state().has_token(&token_id), Error::InvalidTokenId);
-        state.set_pause(token_id, true);
+        state.tokens_state().ensure_token_exists(&token_id)?;
+        state.security_tokens_state_mut().pause(token_id, state_builder);
         logger.log(&Event::Paused(Paused {
             token_id,
         }))?;
@@ -49,13 +52,13 @@ pub fn pause(
 /// Unpauses the given tokenIds.
 #[receive(
     contract = "rwa_security_nft",
-    name = "unpause",
+    name = "unPause",
     mutable,
     enable_logger,
     parameter = "PauseParams<TokenId>",
     error = "super::error::Error"
 )]
-pub fn unpause(
+pub fn un_pause(
     ctx: &ReceiveContext,
     host: &mut Host<State>,
     logger: &mut Logger,
@@ -67,8 +70,8 @@ pub fn unpause(
         tokens,
     }: PauseParams<TokenId> = ctx.parameter_cursor().get()?;
     for token_id in tokens {
-        ensure!(state.is_paused(&token_id), Error::InvalidTokenId);
-        state.set_pause(token_id, false);
+        state.tokens_state().ensure_token_exists(&token_id)?;
+        state.security_tokens_state_mut().un_pause(token_id);
         logger.log(&Event::UnPaused(Paused {
             token_id,
         }))?;
@@ -94,10 +97,9 @@ pub fn is_paused(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<IsP
     };
 
     let state = host.state();
-    let tokens_state = state.tokens_state();
     for token_id in tokens {
-        ensure!(tokens_state.has_token(&token_id), Error::InvalidTokenId);
-        res.tokens.push(state.is_paused(&token_id))
+        state.tokens_state().ensure_token_exists(&token_id)?;
+        res.tokens.push(state.security_tokens_state().is_paused(&token_id))
     }
 
     Ok(res)

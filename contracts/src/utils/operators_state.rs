@@ -2,12 +2,12 @@ use concordium_std::*;
 
 #[derive(Serial, DeserialWithState)]
 #[concordium(state_parameter = "S")]
-pub struct OperatorsState<S = StateApi> {
+pub struct OperatorsState<S> {
     pub addresses: StateMap<Address, StateSet<Address, S>, S>,
 }
 
-impl OperatorsState {
-    pub fn new(state_builder: &mut StateBuilder) -> Self {
+impl<S: HasStateApi> OperatorsState<S> {
+    pub fn new(state_builder: &mut StateBuilder<S>) -> Self {
         OperatorsState {
             addresses: state_builder.new_map(),
         }
@@ -23,7 +23,7 @@ impl OperatorsState {
         &mut self,
         owner: Address,
         operator: Address,
-        state_builder: &mut StateBuilder,
+        state_builder: &mut StateBuilder<S>,
     ) {
         self.addresses
             .entry(owner)
@@ -47,7 +47,7 @@ impl OperatorsState {
     }
 }
 
-pub trait HasOperatorsState<S = StateApi> {
+pub trait HasOperatorsState<S> {
     fn operators_state(&self) -> &OperatorsState<S>;
     fn operators_state_mut(&mut self) -> &mut OperatorsState<S>;
 }

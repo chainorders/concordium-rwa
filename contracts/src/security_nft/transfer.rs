@@ -1,10 +1,10 @@
-use concordium_cis2::{OnReceivingCis2Params, Receiver, Transfer, TransferEvent, TransferParams};
-use concordium_std::*;
+use concordium_cis2::{OnReceivingCis2Params, Receiver, Transfer, TransferEvent, TransferParams, Cis2Event};
+use concordium_std::{ops::Sub, *};
 
 use crate::utils::{
-    agent_state::HasAgentState, compliance_client::ComplianceClient,
+    agents_state::HasAgentsState, compliance_client::ComplianceClient,
     identity_registry_client::IdentityRegistryClient, operators_state::HasOperatorsState,
-    tokens_state::HasTokensState,
+    tokens_security_state::HasTokensSecurityState, tokens_state::HasTokensState,
 };
 
 use super::{error::*, event::*, state::State, types::*};
@@ -39,8 +39,6 @@ pub fn transfer(
         data,
     } in transfers
     {
-        ensure!(amount.eq(&TOKEN_AMOUNT_1), Error::Custom(CustomContractError::InvalidAmount));
-
         let state = host.state_mut();
         let is_authorized =
             // Sender is the Owner of the token
@@ -52,26 +50,31 @@ pub fn transfer(
 
         ensure!(is_authorized, Error::Unauthorized);
         ensure!(
-            !state.is_frozen(&from, &token_id),
-            Error::Custom(CustomContractError::FrozenWallet)
+            !state.security_tokens_state().is_paused(&token_id),
+            Error::Custom(CustomContractError::PausedToken)
         );
-        ensure!(!state.is_paused(&token_id), Error::Custom(CustomContractError::PausedToken));
-        ensure!(
-            state.tokens_state().balance_of(&token_id, &from)?.ge(&amount),
-            Error::InsufficientFunds
-        );
+
+        let un_frozen_balance = state
+            .tokens_state()
+            .balance_of(&token_id, &from)?
+            .sub(state.security_tokens_state().balance_of_frozen(&token_id, &from));
+        ensure!(un_frozen_balance.ge(&amount), Error::InsufficientFunds);
+
         // The supposed owner of the Token should be verified to hold the token
         // This includes both KYC verification and VC verification
         ensure!(
             tir.is_verified(to.address())?,
             Error::Custom(CustomContractError::UnVerifiedIdentity)
         );
-        // The transfer of the ownership of the token should be compliant.
-        // This method will throw error on an non-compliant transfer
-        compliance.transferred(token_id, from, to.address(), amount)?;
+        ensure!(
+            compliance.can_transfer(token_id, from, to.address(), amount)?,
+            Error::Custom(CustomContractError::InCompliantTransfer)
+        );
         state.tokens_state_mut().transfer(token_id, from, to.address(), amount)?;
+        // The transfer of the ownership of the token should be compliant.
+        compliance.transferred(token_id, from, to.address(), amount)?;
 
-        logger.log(&Event::Cis2(concordium_cis2::Cis2Event::Transfer(TransferEvent {
+        logger.log(&Event::Cis2(Cis2Event::Transfer(TransferEvent {
             amount,
             token_id,
             from,
@@ -117,6 +120,7 @@ pub fn forced_transfer(
 
     let state = host.state();
     let tir = IdentityRegistryClient::new(state.get_identity_registry());
+    let compliance = ComplianceClient::new(state.get_compliance());
 
     for Transfer {
         to,
@@ -126,26 +130,30 @@ pub fn forced_transfer(
         data,
     } in transfers
     {
-        ensure!(amount.eq(&TOKEN_AMOUNT_1), Error::Custom(CustomContractError::InvalidAmount));
-
         let state = host.state_mut();
         ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
         ensure!(
-            !state.is_frozen(&from, &token_id),
-            Error::Custom(CustomContractError::FrozenWallet)
+            !state.security_tokens_state().is_paused(&token_id),
+            Error::Custom(CustomContractError::PausedToken)
         );
-        ensure!(!state.is_paused(&token_id), Error::Custom(CustomContractError::PausedToken));
-        ensure!(
-            state.tokens_state().balance_of(&token_id, &from)?.ge(&amount),
-            Error::InsufficientFunds
-        );
+
+        let actual_balance = state.tokens_state().balance_of(&token_id, &from)?;
+        let frozen_balance = state.security_tokens_state().balance_of_frozen(&token_id, &from);
+        let un_frozen_balance = actual_balance.sub(frozen_balance);
+        ensure!(actual_balance.ge(&amount), Error::InsufficientFunds);
         // The supposed owner of the Token should be verified to hold the token
         // This includes both KYC verification and VC verification
         ensure!(
             tir.is_verified(to.address())?,
             Error::Custom(CustomContractError::UnVerifiedIdentity)
         );
-        state.tokens_state_mut().transfer(token_id, from, to.address(), amount);
+        state.tokens_state_mut().transfer(token_id, from, to.address(), amount)?;
+        compliance.transferred(token_id, from, to.address(), amount)?;
+
+        if un_frozen_balance.lt(&amount) {
+            let in_compliant_amount = amount.sub(un_frozen_balance);
+            state.security_tokens_state_mut().un_freeze(token_id, from, in_compliant_amount)?;
+        }
 
         logger.log(&Event::Cis2(concordium_cis2::Cis2Event::Transfer(TransferEvent {
             amount,

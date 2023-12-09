@@ -1,11 +1,12 @@
 use concordium_cis2::{
-    AdditionalData, Cis2Event, MintEvent, OnReceivingCis2Params, Receiver, TokenMetadataEvent,
+    AdditionalData, Cis2Event, MintEvent, OnReceivingCis2Params, Receiver, TokenAmountU8,
+    TokenMetadataEvent,
 };
 use concordium_std::*;
 
 use crate::utils::{
-    agent_state::HasAgentState, identity_registry_client::IdentityRegistryClient,
-    tokens_state::HasTokensState,
+    agents_state::HasAgentsState, compliance_client::ComplianceClient,
+    identity_registry_client::IdentityRegistryClient, tokens_state::HasTokensState,
 };
 
 use super::{error::*, event::*, state::State, types::*};
@@ -20,6 +21,8 @@ pub struct MintParams {
     pub owner: Receiver,
     pub tokens: Vec<MintParam>,
 }
+
+const TOKEN_AMOUNT_1: TokenAmountU8 = TokenAmountU8(1);
 
 /// Mints the given amount of given tokenIds for the given address.
 #[receive(
@@ -51,6 +54,7 @@ pub fn mint(
         Error::Custom(CustomContractError::UnVerifiedIdentity)
     );
 
+    let compliance = ComplianceClient::new(state.get_compliance());
     for MintParam {
         metadata_url,
     } in params.tokens
@@ -62,7 +66,7 @@ pub fn mint(
             state.tokens_state_mut().add_token(
                 token_id,
                 metadata_url.to_owned(),
-                vec![(owner_address, 1.into())],
+                vec![(owner_address, TOKEN_AMOUNT_1)],
                 state_builder,
             )?;
             state.increment_token_id();
@@ -70,9 +74,10 @@ pub fn mint(
             token_id
         };
 
+        compliance.minted(token_id, owner_address, TOKEN_AMOUNT_1)?;
         logger.log(&Event::Cis2(Cis2Event::Mint(MintEvent {
             token_id,
-            amount: 1.into(),
+            amount: TOKEN_AMOUNT_1,
             owner: owner_address,
         })))?;
         logger.log(&Event::Cis2(Cis2Event::TokenMetadata(TokenMetadataEvent {
@@ -82,9 +87,9 @@ pub fn mint(
 
         // If the receiver is a contract: invoke the receive hook function.
         if let Receiver::Contract(address, function) = params.owner.clone() {
-            let parameter: OnReceivingCis2Params<TokenId, TokenAmount> = OnReceivingCis2Params {
+            let parameter = OnReceivingCis2Params {
                 token_id,
-                amount: 1.into(),
+                amount: TOKEN_AMOUNT_1,
                 from: ctx.sender(),
                 data: AdditionalData::empty(),
             };

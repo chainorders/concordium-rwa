@@ -2,12 +2,12 @@ use concordium_std::*;
 
 #[derive(Serial, DeserialWithState)]
 #[concordium(state_parameter = "S")]
-pub struct AgentState<S = StateApi> {
+pub struct AgentsState<S> {
     agents: StateSet<Address, S>,
 }
 
-impl AgentState {
-    pub fn new(agents: Vec<Address>, state_builder: &mut StateBuilder) -> Self {
+impl<S: HasStateApi> AgentsState<S> {
+    pub fn new(agents: Vec<Address>, state_builder: &mut StateBuilder<S>) -> Self {
         let mut ret = Self {
             agents: state_builder.new_set(),
         };
@@ -36,7 +36,7 @@ impl AgentState {
     }
 }
 
-pub trait HasAgentState<S = StateApi> {
-    fn agent_state(&self) -> &AgentState<S>;
-    fn agent_state_mut(&mut self) -> &mut AgentState<S>;
+pub trait HasAgentsState<S> {
+    fn agent_state(&self) -> &AgentsState<S>;
+    fn agent_state_mut(&mut self) -> &mut AgentsState<S>;
 }

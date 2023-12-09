@@ -1,0 +1,6 @@
+[workspace]
+members = ["contracts"]
+
+[workspace.dependencies]
+concordium-std = { version = "8.1.0" }
+concordium-cis2 = { version = "5.1.0" }

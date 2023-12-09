@@ -1,20 +1,22 @@
 use concordium_cis2::{Cis2Event, IsTokenAmount, IsTokenId};
-use concordium_std::*;
+use concordium_std::{schema::SchemaType, *};
 
 use super::types::{TokenAmount, TokenId};
 
 #[derive(Serialize, SchemaType)]
-pub struct AgentUpdatedEvent(pub Address);
-
-#[derive(Serialize, SchemaType)]
-pub struct TokensFrozen<T: IsTokenId, A: IsTokenAmount> {
-    pub token_id: T,
-    pub amount:   A,
-    pub address:  Address,
+pub struct AgentUpdatedEvent{
+    pub agent: Address,
 }
 
 #[derive(Serialize, SchemaType)]
-pub struct Paused<T: IsTokenId> {
+pub struct TokensFrozen<T: IsTokenId + SchemaType, A: IsTokenAmount + SchemaType> {
+    pub token_id: T,
+    pub amount: A,
+    pub address: Address,
+}
+
+#[derive(Serialize, SchemaType)]
+pub struct Paused<T: IsTokenId + SchemaType> {
     pub token_id: T,
 }
 

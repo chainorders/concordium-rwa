@@ -4,6 +4,8 @@ use crate::utils::concordium_cis3::*;
 
 use super::{error::Error, event::*, state::State, types::ContractResult};
 
+/// Executes a function on behalf of the signer
+/// If the signature is valid, the function is executed
 #[receive(
     contract = "rwa_sponsor",
     name = "permit",

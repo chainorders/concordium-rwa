@@ -17,6 +17,8 @@ pub struct SupportsQueryResponse {
     pub results: Vec<bool>,
 }
 
+/// Returns true Or false for each query in the list of queries. 
+/// The result is true if the contract supports execution a function and false otherwise.
 #[receive(
     contract = "rwa_sponsor",
     name = "supportsPermit",

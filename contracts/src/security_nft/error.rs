@@ -12,10 +12,13 @@ pub type Error = Cis2Error<CustomContractError>;
 pub enum CustomContractError {
     ParseError,
     LogError,
+    /// Error calling Identity Registry Contract
     IdentityRegistryError,
     /// The Receiver of the token is not verified
     UnVerifiedIdentity,
     /// The transfer is non compliant
+    InCompliantTransfer,
+    /// Error calling Compliance Contract
     ComplianceError,
     /// There was an error Invoking a contract
     CallContractError,

@@ -1,69 +1,49 @@
-use crate::utils::{agent_state::{AgentState, HasAgentState}, operators_state::{OperatorsState, HasOperatorsState}, tokens_state::{TokensState, HasTokensState}};
+use crate::utils::{
+    agents_state::{AgentsState, HasAgentsState},
+    operators_state::{HasOperatorsState, OperatorsState},
+    tokens_security_state::{HasTokensSecurityState, TokensSecurityState},
+    tokens_state::{HasTokensState, TokensState},
+};
 
-use super::types::{TokenId, TokenAmount};
+use super::types::{TokenAmount, TokenId};
 use concordium_std::*;
-
-#[derive(Serialize)]
-pub struct TokenState {
-    is_paused: bool,
-}
-
-impl TokenState {
-    fn new() -> TokenState {
-        TokenState {
-            is_paused: false,
-        }
-    }
-}
-
-#[derive(Serial, DeserialWithState)]
-#[concordium(state_parameter = "S")]
-struct AddressState<S = StateApi> {
-    frozen_tokens: StateSet<TokenId, S>,
-}
-
-impl AddressState {
-    pub fn new(state_builder: &mut StateBuilder) -> AddressState {
-        AddressState {
-            frozen_tokens: state_builder.new_set(),
-        }
-    }
-}
 
 #[derive(Serial, DeserialWithState)]
 #[concordium(state_parameter = "S")]
 pub struct State<S = StateApi> {
-    agent_state: AgentState<S>,
+    /// Agents State
+    agents_state: AgentsState<S>,
+    /// CIS2 Address State
     operators_state: OperatorsState<S>,
+    /// CIS2 token state
     tokens_state: TokensState<TokenId, TokenAmount, S>,
+    /// Token Security State
+    tokens_security_state: TokensSecurityState<TokenId, TokenAmount, S>,
 
     sponsors: StateSet<ContractAddress, S>,
     identity_registry: ContractAddress,
     compliance: ContractAddress,
-    tokens: StateMap<TokenId, TokenState, S>,
-    addresses: StateMap<Address, AddressState<S>, S>,
     token_id: TokenId,
 }
 
-impl State {
+impl<S: HasStateApi> State<S> {
     pub fn new(
         identity_registry: ContractAddress,
         compliance: ContractAddress,
         sponsors: Vec<ContractAddress>,
         agents: Vec<Address>,
-        state_builder: &mut StateBuilder,
+        state_builder: &mut StateBuilder<S>,
     ) -> Self {
         let mut state = State {
-            agent_state: AgentState::new(agents, state_builder),
+            agents_state: AgentsState::new(agents, state_builder),
             operators_state: OperatorsState::new(state_builder),
-            tokens_state: TokensState::new(state_builder), 
+            tokens_state: TokensState::new(state_builder),
+            tokens_security_state: TokensSecurityState::new(state_builder),
 
             identity_registry,
             compliance,
             sponsors: state_builder.new_set(),
-            tokens: state_builder.new_map(),
             token_id: 0.into(),
-            addresses: state_builder.new_map(),
         };
 
         for sponsor in sponsors {
@@ -75,36 +55,6 @@ impl State {
 
     pub fn sponsors(&self) -> Vec<ContractAddress> {
         self.sponsors.iter().map(|s| *s).collect()
-    }
-
-    pub fn set_pause(&mut self, token_id: TokenId, pause: bool) {
-        self.tokens.entry(token_id).and_modify(|t| t.is_paused = pause);
-    }
-
-    pub fn is_paused(&self, token_id: &TokenId) -> bool {
-        self.tokens.get(token_id).map(|t| t.is_paused).unwrap_or(false)
-    }
-
-    pub fn is_frozen(&self, address: &Address, token_id: &TokenId) -> bool {
-        self.addresses.get(address).map(|s| s.frozen_tokens.contains(token_id)).unwrap_or(false)
-    }
-
-    pub fn freeze(
-        &mut self,
-        address: Address,
-        token_id: TokenId,
-        state_builder: &mut StateBuilder,
-    ) {
-        self.addresses
-            .entry(address)
-            .or_insert(AddressState::new(state_builder))
-            .modify(|f| f.frozen_tokens.insert(token_id));
-    }
-
-    pub fn un_freeze(&mut self, address: Address, token_id: concordium_cis2::TokenIdU8) {
-        self.addresses.entry(address).and_modify(|f| {
-            f.frozen_tokens.remove(&token_id);
-        });
     }
 
     pub fn is_sponsor(&self, address: &Address) -> bool {
@@ -131,32 +81,42 @@ impl State {
     }
 }
 
-impl HasAgentState for State {
-    fn agent_state(&self) -> &AgentState {
-        &self.agent_state
+impl<S> HasAgentsState<S> for State<S> {
+    fn agent_state(&self) -> &AgentsState<S> {
+        &self.agents_state
     }
 
-    fn agent_state_mut(&mut self) -> &mut AgentState {
-        &mut self.agent_state
+    fn agent_state_mut(&mut self) -> &mut AgentsState<S> {
+        &mut self.agents_state
     }
 }
 
-impl HasOperatorsState for State {
-    fn operators_state(&self) -> &OperatorsState {
+impl<S> HasOperatorsState<S> for State<S> {
+    fn operators_state(&self) -> &OperatorsState<S> {
         &self.operators_state
     }
 
-    fn operators_state_mut(&mut self) -> &mut OperatorsState {
+    fn operators_state_mut(&mut self) -> &mut OperatorsState<S> {
         &mut self.operators_state
     }
 }
 
-impl HasTokensState<TokenId, TokenAmount> for State {
-    fn tokens_state(&self) -> &TokensState<TokenId, TokenAmount> {
+impl<S> HasTokensState<TokenId, TokenAmount, S> for State<S> {
+    fn tokens_state(&self) -> &TokensState<TokenId, TokenAmount, S> {
         &self.tokens_state
     }
 
-    fn tokens_state_mut(&mut self) -> &mut TokensState<TokenId, TokenAmount> {
+    fn tokens_state_mut(&mut self) -> &mut TokensState<TokenId, TokenAmount, S> {
         &mut self.tokens_state
+    }
+}
+
+impl<S> HasTokensSecurityState<TokenId, TokenAmount, S> for State<S> {
+    fn security_tokens_state(&self) -> &TokensSecurityState<TokenId, TokenAmount, S> {
+        &self.tokens_security_state
+    }
+
+    fn security_tokens_state_mut(&mut self) -> &mut TokensSecurityState<TokenId, TokenAmount, S> {
+        &mut self.tokens_security_state
     }
 }

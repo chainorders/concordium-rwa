@@ -1,6 +1,6 @@
 use concordium_std::*;
 
-use crate::utils::agent_state::HasAgentState;
+use crate::utils::agents_state::HasAgentsState;
 
 use super::{error::*, event::*, state::State, types::*};
 
@@ -24,7 +24,7 @@ pub fn is_agent(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<bool
 )]
 /// Returns the list of agents.
 pub fn agents(_ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<Vec<Address>> {
-    Ok(host.state.agent_state().get_agents())
+    Ok(host.state().agent_state().get_agents())
 }
 
 #[receive(
@@ -42,9 +42,11 @@ pub fn add_agent(
     logger: &mut Logger,
 ) -> ContractResult<()> {
     ensure!(ctx.sender().matches_account(&ctx.owner()), Error::Unauthorized);
-    let address: Address = ctx.parameter_cursor().get()?;
-    host.state.agent_state_mut().add_agent(address);
-    logger.log(&Event::AgentAdded(AgentUpdatedEvent(address)))?;
+    let agent: Address = ctx.parameter_cursor().get()?;
+    host.state_mut().agent_state_mut().add_agent(agent);
+    logger.log(&Event::AgentAdded(AgentUpdatedEvent {
+        agent,
+    }))?;
 
     Ok(())
 }
@@ -64,9 +66,11 @@ pub fn remove_agent(
     logger: &mut Logger,
 ) -> ContractResult<()> {
     ensure!(ctx.sender().matches_account(&ctx.owner()), Error::Unauthorized);
-    let address: Address = ctx.parameter_cursor().get()?;
-    host.state.agent_state_mut().remove_agent(&address);
-    logger.log(&Event::AgentRemoved(AgentUpdatedEvent(address)))?;
+    let agent: Address = ctx.parameter_cursor().get()?;
+    host.state_mut().agent_state_mut().remove_agent(&agent);
+    logger.log(&Event::AgentRemoved(AgentUpdatedEvent {
+        agent,
+    }))?;
 
     Ok(())
 }

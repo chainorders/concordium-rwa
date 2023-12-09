@@ -8,6 +8,7 @@
 	},
 	"scripts": {
 		"build": "cargo concordium build --out ./module.wasm.v1 --schema-out ./schema.bin",
+		"format": "cargo +nightly-2022-06-09 fmt",
 		"generate-client": "yarn build && npx ccd-js-gen --module ./module.wasm.v1 --out-dir ../backend/generated"
 	}
 }
