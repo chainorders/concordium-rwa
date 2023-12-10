@@ -51,6 +51,19 @@ pub struct State<S = StateApi> {
 }
 
 impl<S: HasStateApi> State<S> {
+    /// Creates a new state with the given parameters.
+    ///
+    /// # Parameters
+    ///
+    /// * `identity_registry`: The address of the identity registry contract.
+    /// * `compliance`: The address of the compliance contract.
+    /// * `sponsors`: A vector of contract addresses that are sponsors.
+    /// * `agents`: A vector of agent addresses.
+    /// * `state_builder`: A mutable reference to the state builder.
+    ///
+    /// # Returns
+    ///
+    /// Returns a new `State` instance.
     pub fn new(
         identity_registry: ContractAddress,
         compliance: ContractAddress,
@@ -79,10 +92,24 @@ impl<S: HasStateApi> State<S> {
         state
     }
 
+    /// Returns the sponsors.
+    ///
+    /// # Returns
+    ///
+    /// Returns a vector of `ContractAddress` that are sponsors.
     pub fn sponsors(&self) -> Vec<ContractAddress> {
         self.sponsors.iter().map(|s| *s).collect()
     }
 
+    /// Checks if the given address is a sponsor.
+    ///
+    /// # Parameters
+    ///
+    /// * `address`: The address to check.
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the given address is a sponsor, `false` otherwise.
     pub fn is_sponsor(&self, address: &Address) -> bool {
         match address {
             Address::Account(_) => false,
@@ -90,14 +117,35 @@ impl<S: HasStateApi> State<S> {
         }
     }
 
+    /// Returns the token ID.
+    ///
+    /// # Returns
+    ///
+    /// Returns the `TokenId`.
     pub fn get_token_id(&self) -> TokenId {
         self.token_id
     }
 
+    /// Increments the token ID.
     pub fn increment_token_id(&mut self) {
         self.token_id.0 += 1;
     }
 
+    /// Recovers the given address to the new address.
+    ///
+    /// # Parameters
+    ///
+    /// * `address`: The address to recover.
+    /// * `new_address`: The new address.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Result<(), StateError>` indicating whether the operation was successful.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StateError::AddressDoesNotExist` if the address being recovered does not exist.
+    /// Returns `StateError::AddressAlreadyExists` if the new address (Recovery Address) already exists.
     pub fn recover(&mut self, address: Address, new_address: Address) -> Result<(), StateError> {
         self.holders_state_mut().recover(address, new_address)?;
         self.holders_security_state_mut().recover(address, new_address)?;
@@ -105,6 +153,22 @@ impl<S: HasStateApi> State<S> {
     }
 
     /// Mints a new token with the given metadata url and given balances. Returns the token id.
+    ///
+    /// # Parameters
+    ///
+    /// * `metadata_url`: The metadata URL of the token.
+    /// * `balances`: A vector of tuples containing the address and the token amount.
+    /// * `state_builder`: A mutable reference to the state builder.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Result<TokenId, StateError>` containing the token ID.
+    ///
+    /// # Errors
+    ///
+    /// This method will return an error if:
+    /// * `TokenAlreadyExists` - The token already exists in the state.
+    /// * `AmountOverflow` - The amount of the token causes an overflow.
     pub fn mint_token(
         &mut self,
         metadata_url: MetadataUrl,
@@ -122,10 +186,29 @@ impl<S: HasStateApi> State<S> {
     }
 
     /// Returns the unfrozen balance of the given token for the given addresses.
-    pub fn unfrozen_balance_of(&self, address: &Address, token_id: &TokenId) -> TokenAmount {
+    ///
+    /// # Parameters
+    ///
+    /// * `address`: The address to check.
+    /// * `token_id`: The token ID to check.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Result<TokenAmount, StateError>` containing the unfrozen balance.
+    ///
+    /// # Errors
+    ///
+    /// This method will return an error if:
+    /// * `StateError::TokenDoesNotExist` - The token does not exist in the state.
+    pub fn unfrozen_balance_of(
+        &self,
+        address: &Address,
+        token_id: &TokenId,
+    ) -> Result<TokenAmount, StateError> {
+        self.tokens_state().ensure_token_exists(token_id)?;
         let balance = self.holders_state().balance_of(address, token_id);
         let frozen_balance = self.holders_security_state().balance_of_frozen(address, token_id);
-        balance.sub(frozen_balance)
+        Ok(balance.sub(frozen_balance))
     }
 }
 

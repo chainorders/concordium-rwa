@@ -19,6 +19,16 @@ pub struct IsPausedResponse {
 }
 
 /// Pauses the given tokenIds.
+///
+/// # Returns
+///
+/// Returns `ContractResult<()>` indicating whether the operation was successful.
+///
+/// # Errors
+///
+/// Returns `Error::Unauthorized` if the sender is not an agent.
+/// Returns `Error::TokenDoesNotExist` if the token does not exist.
+/// Returns `Error::ParseError` if the parameters could not be parsed.
 #[receive(
     contract = "rwa_security_nft",
     name = "pause",
@@ -49,7 +59,17 @@ pub fn pause(
     Ok(())
 }
 
-/// Unpauses the given tokenIds.
+/// Unpauses the given tokens.
+///
+/// # Returns
+///
+/// Returns `ContractResult<()>` indicating whether the operation was successful.
+///
+/// # Errors
+///
+/// Returns `Error::Unauthorized` if the sender is not an agent.
+/// Returns `Error::TokenDoesNotExist` if the token does not exist.
+/// Returns `Error::ParseError` if the parameters could not be parsed.
 #[receive(
     contract = "rwa_security_nft",
     name = "unPause",
@@ -80,7 +100,16 @@ pub fn un_pause(
     Ok(())
 }
 
-/// Returns true if the given tokenIds are paused.
+/// Returns true if the given tokens are paused.
+///
+/// # Returns
+///
+/// Returns `ContractResult<IsPausedResponse>` containing a boolean for each token indicating whether it is paused.
+///
+/// # Errors
+///
+/// Returns `Error::TokenDoesNotExist` if the token does not exist.
+/// Returns `Error::ParseError` if the parameters could not be parsed.
 #[receive(
     contract = "rwa_security_nft",
     name = "isPaused",

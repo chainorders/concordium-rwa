@@ -30,7 +30,17 @@ pub struct BurnParams<T: IsTokenId, A: IsTokenAmount>(
     #[concordium(size_length = 2)] pub Vec<Burn<T, A>>,
 );
 
-/// Burns the supplied amount of tokens for the given token ids.
+/// Burns the specified amount of the given token from the given owner's account.
+///
+/// # Returns
+///
+/// Returns `ContractResult<()>` indicating whether the operation was successful.
+///
+/// # Errors
+///
+/// Returns `Error::Unauthorized` if the sender is not authorized to burn the tokens.
+/// Returns `Error::Custom(CustomContractError::PausedToken)` if the token is paused.
+/// Returns `Error::InsufficientFunds` if the owner does not have enough tokens.
 #[receive(
     contract = "rwa_security_nft",
     name = "burn",
@@ -67,7 +77,10 @@ pub fn burn(
             !state.tokens_security_state().is_paused(&token_id),
             Error::Custom(CustomContractError::PausedToken)
         );
-        ensure!(state.unfrozen_balance_of(&owner, &token_id).ge(&amount), Error::InsufficientFunds);
+        ensure!(
+            state.unfrozen_balance_of(&owner, &token_id)?.ge(&amount),
+            Error::InsufficientFunds
+        );
 
         state.holders_state_mut().sub_balance(owner, token_id, amount)?;
 

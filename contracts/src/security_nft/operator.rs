@@ -5,7 +5,15 @@ use crate::utils::holders_state::HasHoldersState;
 
 use super::{event::Event, state::State, types::ContractResult};
 
-/// Updates the Operator of the given Address
+/// Updates the operator status for the sender.
+///
+/// # Returns
+///
+/// Returns `ContractResult<()>` indicating whether the operation was successful.
+///
+/// # Errors
+///
+/// Returns `Error::ParseError` if the parameters could not be parsed.
 #[receive(
     contract = "rwa_security_nft",
     name = "updateOperator",
@@ -24,7 +32,7 @@ pub fn update_operator(
     }: UpdateOperatorParams = ctx.parameter_cursor().get()?;
     let (state, state_builder) = host.state_and_builder();
     let state = state.holders_state_mut();
-    let owner = ctx.sender();
+    let sender = ctx.sender();
 
     for UpdateOperator {
         operator,
@@ -32,21 +40,29 @@ pub fn update_operator(
     } in updates
     {
         match update {
-            OperatorUpdate::Add => state.add_operator(owner, operator, state_builder),
-            OperatorUpdate::Remove => state.remove_operator(owner, &operator),
+            OperatorUpdate::Add => state.add_operator(sender, operator, state_builder),
+            OperatorUpdate::Remove => state.remove_operator(sender, &operator),
         }
 
         logger.log(&Event::Cis2(Cis2Event::UpdateOperator(UpdateOperatorEvent {
             operator,
             update,
-            owner,
+            owner: sender,
         })))?;
     }
 
     Ok(())
 }
 
-/// Returns true if the given address is an operator for the given owner.
+// Returns true if the given address is an operator for the given owner.
+///
+/// # Returns
+///
+/// Returns `ContractResult<OperatorOfQueryResponse>` containing a boolean indicating whether the given address is an operator for the given owner.
+///
+/// # Errors
+///
+/// Returns `Error::ParseError` if the parameters could not be parsed.
 #[receive(
     contract = "rwa_security_nft",
     name = "operatorOf",
@@ -61,18 +77,8 @@ pub fn operator_of(
     let OperatorOfQueryParams {
         queries,
     }: OperatorOfQueryParams = ctx.parameter_cursor().get()?;
-    let state = host.state();
-    let state = state.holders_state();
+    let state = host.state().holders_state();
+    let res: Vec<bool> = queries.iter().map(|q| state.is_operator(&q.owner, &q.address)).collect();
 
-    let mut res: OperatorOfQueryResponse =
-        OperatorOfQueryResponse(Vec::with_capacity(queries.len()));
-    for OperatorOfQuery {
-        owner,
-        address,
-    } in queries
-    {
-        res.0.push(state.is_operator(&owner, &address))
-    }
-
-    Ok(res)
+    Ok(OperatorOfQueryResponse(res))
 }

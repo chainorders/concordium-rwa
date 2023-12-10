@@ -32,7 +32,17 @@ pub struct FrozenResponse<T: IsTokenAmount> {
     pub tokens: Vec<T>,
 }
 
-/// Freezes the given amount of give tokenIds for the given address.
+/// Freezes the given amount of given tokenIds for the given address.
+///
+/// # Returns
+///
+/// Returns `ContractResult<()>` indicating whether the operation was successful.
+///
+/// # Errors
+///
+/// Returns `Error::Unauthorized` if the sender is not an agent.
+/// Returns `Error::InsufficientFunds` if the owner does not have enough unfrozen balance.
+/// Returns `Error::ParseError` if the parameters could not be parsed.
 #[receive(
     contract = "rwa_security_nft",
     name = "freeze",
@@ -56,7 +66,7 @@ pub fn freeze(
     }: FreezeParams<TokenId, TokenAmount> = ctx.parameter_cursor().get()?;
     for token in tokens {
         ensure!(
-            state.unfrozen_balance_of(&owner, &token.token_id).ge(&token.token_amount),
+            state.unfrozen_balance_of(&owner, &token.token_id)?.ge(&token.token_amount),
             Error::InsufficientFunds
         );
 
@@ -76,7 +86,16 @@ pub fn freeze(
     Ok(())
 }
 
-/// Unfreezes the given amount of give tokenIds for the given address.
+/// Unfreezes the given amount of given tokenIds for the given address.
+///
+/// # Returns
+///
+/// Returns `ContractResult<()>` indicating whether the operation was successful.
+///
+/// # Errors
+///
+/// Returns `Error::Unauthorized` if the sender is not an agent.
+/// Returns `Error::ParseError` if the parameters could not be parsed.
 #[receive(
     contract = "rwa_security_nft",
     name = "unFreeze",
@@ -111,6 +130,15 @@ pub fn un_freeze(
 }
 
 /// Returns the frozen balance of the given token for the given addresses.
+///
+/// # Returns
+///
+/// Returns `ContractResult<FrozenResponse<TokenAmount>>` containing the frozen balance of the given token for the given addresses.
+///
+/// # Errors
+///
+/// Returns `Error::TokenDoesNotExist` if the token does not exist.
+/// Returns `Error::ParseError` if the parameters could not be parsed.
 #[receive(
     contract = "rwa_security_nft",
     name = "balanceOfFrozen",
@@ -143,6 +171,12 @@ pub fn balance_of_frozen(
 }
 
 /// Returns the unfrozen balance of the given token for the given addresses.
+///
+/// # Returns
+///
+/// Returns `ContractResult<FrozenResponse<TokenAmount>>` containing the unfrozen balance of the given token for the given addresses.
+/// Returns `Error::TokenDoesNotExist` if the token does not exist.
+/// Returns `Error::ParseError` if the parameters could not be parsed.
 #[receive(
     contract = "rwa_security_nft",
     name = "balanceOfUnFrozen",
@@ -160,8 +194,10 @@ pub fn balance_of_un_frozen(
         tokens: token_ids,
     }: FrozenParams<TokenId> = ctx.parameter_cursor().get()?;
 
-    let tokens =
-        token_ids.iter().map(|token_id| state.unfrozen_balance_of(&owner, &token_id)).collect();
+    let tokens = token_ids
+        .iter()
+        .map(|token_id| state.unfrozen_balance_of(&owner, &token_id))
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(FrozenResponse {
         tokens,

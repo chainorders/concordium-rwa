@@ -14,6 +14,16 @@ impl TokenSecurityState {
     }
 }
 
+/// `TokensSecurityState` is a struct that holds the security state of tokens.
+///
+/// # Type Parameters
+///
+/// * `T` - The type of the token ID. Must implement `IsTokenId`.
+/// * `S` - The type of the state API. Must implement `HasStateApi`.
+///
+/// # Fields
+///
+/// * `tokens_state` - A `StateMap` that maps token IDs to their respective `TokenSecurityState`.
 #[derive(Serial, DeserialWithState)]
 #[concordium(state_parameter = "S")]
 pub struct TokensSecurityState<T, S> {
@@ -21,18 +31,37 @@ pub struct TokensSecurityState<T, S> {
 }
 
 impl<T: IsTokenId, S: HasStateApi> TokensSecurityState<T, S> {
+    /// Creates a new `TokensSecurityState` with empty tokens state.
+    ///
+    /// # Arguments
+    ///
+    /// * `state_builder` - A mutable reference to the state builder.
     pub fn new(state_builder: &mut StateBuilder<S>) -> Self {
         Self {
             tokens_state: state_builder.new_map(),
         }
     }
 
-    /// Returns true if the token with the given id is paused.
+    /// Checks if the token with the given ID is paused.
+    ///
+    /// # Arguments
+    ///
+    /// * `token_id` - The ID of the token to check.
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the token is paused, `false` otherwise. If the token does not exist, returns `false`.
     pub fn is_paused(&self, token_id: &T) -> bool {
         self.tokens_state.get(token_id).map(|token| token.is_paused).unwrap_or(false)
     }
 
-    /// Pauses the token with the given id.
+    /// Pauses the token with the given ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `token_id` - The ID of the token to pause.
+    ///
+    /// If the token does not exist, it is created and then paused.
     pub fn pause(&mut self, token_id: T) {
         self.tokens_state
             .entry(token_id)
@@ -40,7 +69,13 @@ impl<T: IsTokenId, S: HasStateApi> TokensSecurityState<T, S> {
             .modify(|token| token.is_paused = true)
     }
 
-    /// Unpauses the token with the given id.
+    /// Unpauses the token with the given ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `token_id` - The ID of the token to unpause.
+    ///
+    /// If the token does not exist, nothing happens.
     pub fn un_pause(&mut self, token_id: T) {
         self.tokens_state.entry(token_id).and_modify(|token| token.is_paused = false);
     }

@@ -26,6 +26,17 @@ pub struct MintParams {
 const TOKEN_AMOUNT_1: TokenAmountU8 = TokenAmountU8(1);
 
 /// Mints the given amount of given tokenIds for the given address.
+///
+/// # Returns
+///
+/// Returns `ContractResult<()>` indicating whether the operation was successful.
+///
+/// # Errors
+///
+/// Returns error `Unauthorized` if the sender is not an agent.
+/// Returns error `UnVerifiedIdentity` if the owner is not verified.
+/// Returns error `InCompliantTransfer` if the transfer is non-compliant.
+/// Returns error `ParseError` if the parameters could not be parsed.
 #[receive(
     contract = "rwa_security_nft",
     name = "mint",

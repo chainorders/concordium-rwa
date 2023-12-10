@@ -1,18 +1,34 @@
 use concordium_cis2::*;
 use concordium_std::{ops, *};
 
+/// `TokenState` is a struct that holds the state of a token.
 #[derive(Serial, Deserial)]
 pub struct TokenState {
+    /// The metadata URL of the token.
     metadata_url: MetadataUrl,
 }
 
 impl TokenState {
+    /// Creates a new `TokenState` with the given metadata URL.
+    ///
+    /// # Arguments
+    ///
+    /// * `metadata_url` - The metadata URL of the token.
+    ///
+    /// # Returns
+    ///
+    /// Returns a new `TokenState` with the given metadata URL.
     pub fn new(metadata_url: MetadataUrl) -> Self {
         Self {
             metadata_url,
         }
     }
 
+    /// Returns the metadata URL of the token.
+    ///
+    /// # Returns
+    ///
+    /// Returns a reference to the metadata URL of the token.
     pub fn metadata_url(&self) -> &MetadataUrl {
         &self.metadata_url
     }
@@ -24,6 +40,9 @@ pub struct TokensState<T, S> {
     tokens: StateMap<T, TokenState, S>,
 }
 
+/// Trait representing a token amount.
+/// 
+/// This trait is used to define the behavior of token amounts.
 pub trait IsTokenAmount:
     concordium_cis2::IsTokenAmount
     + PartialOrd
@@ -32,20 +51,40 @@ pub trait IsTokenAmount:
     + ops::AddAssign
     + ops::Sub<Output = Self>
 {
+    /// Returns the zero value of the token amount.
     fn zero() -> Self;
+
+    /// Returns the maximum value of the token amount.
+    /// This should return `1` for NFTs.
     fn max_value() -> Self;
 
     /// Subtracts the given amount from self. Returns None if the amount is too large.
-    fn checked_sub_assign(&mut self, other: Self) -> Option<&mut Self> {
+    ///
+    /// # Arguments
+    ///
+    /// * `other` - The amount to subtract.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Some(())` if the subtraction was successful, `None` otherwise.
+    fn checked_sub_assign(&mut self, other: Self) -> Option<()> {
         if other.le(&self) {
             self.sub_assign(other);
-            Some(self)
+            Some(())
         } else {
             None
         }
     }
 
     /// Adds the given amount to self. Returns None if the amount is too large.
+    ///
+    /// # Arguments
+    ///
+    /// * `other` - The amount to add.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Some(())` if the addition was successful, `None` otherwise.
     fn checked_add_assign(&mut self, other: Self) -> Option<()> {
         if other.le(&Self::max_value().sub(*self)) {
             self.add_assign(other);
@@ -64,19 +103,40 @@ pub enum TokenStateError {
 pub type TokenStateResult<T> = Result<T, TokenStateError>;
 
 impl<T: IsTokenId, S: HasStateApi> TokensState<T, S> {
+    /// Creates a new `TokensState` with empty tokens.
+    ///
+    /// # Arguments
+    ///
+    /// * `state_builder` - A mutable reference to the state builder.
     pub fn new(state_builder: &mut StateBuilder<S>) -> Self {
         TokensState {
             tokens: state_builder.new_map(),
         }
     }
 
-    /// Returns true if the token with the given id exists.
+    /// Checks if the token with the given ID exists.
+    ///
+    /// # Arguments
+    ///
+    /// * `token_id` - The ID of the token to check.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the token exists, `Err(TokenStateError::TokenDoesNotExist)` otherwise.
     pub fn ensure_token_exists(&self, token_id: &T) -> TokenStateResult<()> {
         self.tokens.get(token_id).ok_or(TokenStateError::TokenDoesNotExist)?;
         Ok(())
     }
 
-    /// Returns the metadata url of the token with the given id.
+    /// Returns the metadata URL of the token with the given ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `token_id` - The ID of the token to get the metadata URL for.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(MetadataUrl)` if the token exists, `Err(TokenStateError::TokenDoesNotExist)` otherwise.
     pub fn token_metadata_url(&self, token_id: &T) -> TokenStateResult<MetadataUrl> {
         self.tokens
             .get(token_id)
@@ -84,11 +144,16 @@ impl<T: IsTokenId, S: HasStateApi> TokensState<T, S> {
             .ok_or(TokenStateError::TokenDoesNotExist)
     }
 
-    /// Adds the token with the given id to the state. Returns an error if the token already exists.
-    /// ## Arguments
-    /// * `token_id` - The id of the token to add.
-    /// * `metadata_url` - The metadata url of the token to add.
-    /// * `initial_balances` - The initial balances of the token to add.
+    /// Adds a token with the given ID and metadata URL to the state.
+    ///
+    /// # Arguments
+    ///
+    /// * `token_id` - The ID of the token to add.
+    /// * `metadata_url` - The metadata URL of the token to add.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the token was added successfully, `Err(TokenStateError::TokenAlreadyExists)` if the token already exists.
     pub fn add_token(&mut self, token_id: T, metadata_url: MetadataUrl) -> TokenStateResult<()> {
         self.tokens
             .entry(token_id)

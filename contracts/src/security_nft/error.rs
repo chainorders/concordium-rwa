@@ -10,22 +10,34 @@ pub type Error = Cis2Error<CustomContractError>;
 
 #[derive(Serialize, SchemaType, Reject, Debug)]
 pub enum CustomContractError {
+    /// Error occurred while parsing.
     ParseError,
+
+    /// Error occurred while logging.
     LogError,
-    /// Error calling Identity Registry Contract
+
+    /// Error occurred while calling the Identity Registry Contract.
     IdentityRegistryError,
-    /// The Receiver of the token is not verified
+
+    /// The receiver of the token is not verified.
     UnVerifiedIdentity,
-    /// The transfer is non compliant
+
+    /// The transfer is non-compliant.
     InCompliantTransfer,
-    /// Error calling Compliance Contract
+
+    /// Error occurred while calling the Compliance Contract.
     ComplianceError,
-    /// There was an error Invoking a contract
+
+    /// Error occurred while invoking a contract.
     CallContractError,
-    /// The token is paused
+
+    /// The token is paused.
     PausedToken,
-    /// The amount for NFT is not 1
+
+    /// The amount for NFT is not 1.
     InvalidAmount,
+
+    /// The provided address is invalid.
     InvalidAddress,
 }
 

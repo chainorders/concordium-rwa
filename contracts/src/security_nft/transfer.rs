@@ -13,6 +13,22 @@ use crate::utils::{
 use super::{error::*, event::*, state::State, types::*};
 
 /// Compliant Transfers ownership of an NFT from one verified account to another verified account.
+/// This function can be called by the owner of the token or an operator of the owner or the trusted sponsor of the transaction.
+/// 
+/// # Returns
+///
+/// Returns `ContractResult<()>` indicating the success or failure of the operation.
+///
+/// # Errors
+///
+/// This method will return an error if:
+/// * `concordium_std::ParseError` - The parameter cursor cannot parse the `TransferParams`.
+/// * `Error::Unauthorized` - The sender is not authorized to perform the transfer.
+/// * `Error::Custom(CustomContractError::PausedToken)` - The token is paused.
+/// * `Error::InsufficientFunds` - The sender does not have enough tokens.
+/// * `Error::Custom(CustomContractError::UnVerifiedIdentity)` - The receiver's identity is not verified.
+/// * `Error::Custom(CustomContractError::InCompliantTransfer)` - The transfer is not compliant.
+/// * `Error::Custom(CustomContractError::LogError)` - The logger failed to log the event.
 #[receive(
     contract = "rwa_security_nft",
     name = "transfer",
@@ -57,7 +73,7 @@ pub fn transfer(
             !state.tokens_security_state().is_paused(&token_id),
             Error::Custom(CustomContractError::PausedToken)
         );
-        ensure!(state.unfrozen_balance_of(&from, &token_id).ge(&amount), Error::InsufficientFunds);
+        ensure!(state.unfrozen_balance_of(&from, &token_id)?.ge(&amount), Error::InsufficientFunds);
         // The supposed owner of the Token should be verified to hold the token
         // This includes both KYC verification and VC verification
         ensure!(
@@ -101,7 +117,23 @@ pub fn transfer(
     Ok(())
 }
 
-/// Transfers ownership of an NFT from one verified account to another verified account. Does not check for compliance.
+/// Forces the transfer of a specific amount of tokens from one verified account to another verified.
+/// This function can be called by a trusted agent.
+/// This function can be used to transfer tokens that are not compliant.
+/// 
+/// # Returns
+///
+/// Returns `ContractResult<()>` indicating the success or failure of the operation.
+///
+/// # Errors
+///
+/// This method will return an error if:
+/// * `concordium_std::ParseError` - The parameter cursor cannot parse the `TransferParams`.
+/// * `Error::Unauthorized` - The sender is not authorized to perform the transfer. Sender is not an agent.
+/// * `Error::Custom(CustomContractError::PausedToken)` - The token is paused.
+/// * `Error::InsufficientFunds` - The sender does not have enough tokens.
+/// * `Error::Custom(CustomContractError::UnVerifiedIdentity)` - The receiver's identity is not verified.
+/// * `Error::Custom(CustomContractError::LogError)` - The logger failed to log the event.
 #[receive(
     contract = "rwa_security_nft",
     name = "forcedTransfer",

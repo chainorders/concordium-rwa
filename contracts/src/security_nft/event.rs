@@ -31,22 +31,39 @@ pub struct ComplianceAdded(pub ContractAddress);
 #[derive(Serialize, SchemaType)]
 #[concordium(repr(u8))]
 pub enum Event {
+    /// Event triggered when an identity registry is added.
     #[concordium(tag = 243)]
     IdentityRegistryAdded(IdentityRegistryAdded),
+
+    /// Event triggered when compliance is added.
     #[concordium(tag = 244)]
     ComplianceAdded(ComplianceAdded),
+
+    /// Event triggered when a token is unpaused.
     #[concordium(tag = 245)]
     UnPaused(Paused<TokenId>),
+
+    /// Event triggered when a token is paused.
     #[concordium(tag = 246)]
     Paused(Paused<TokenId>),
+
+    /// Event triggered when tokens are frozen.
     #[concordium(tag = 247)]
     TokensFrozen(TokensFrozen<TokenId, TokenAmount>),
+
+    /// Event triggered when tokens are unfrozen.
     #[concordium(tag = 248)]
     TokensUnFrozen(TokensFrozen<TokenId, TokenAmount>),
+
+    /// Event triggered when an agent is removed.
     #[concordium(tag = 249)]
     AgentRemoved(AgentUpdatedEvent),
+
+    /// Event triggered when an agent is added.
     #[concordium(tag = 250)]
     AgentAdded(AgentUpdatedEvent),
+
+    /// Event forwarded from the CIS2 contract.
     #[concordium(forward = cis2_events)]
     Cis2(Cis2Event<TokenId, TokenAmount>),
 }

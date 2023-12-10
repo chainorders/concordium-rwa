@@ -15,6 +15,15 @@ pub struct InitParam {
     pub sponsors: Vec<ContractAddress>,
 }
 
+/// Initializes the contract with the given parameters.
+///
+/// # Returns
+///
+/// Returns `InitResult<State>` indicating whether the operation was successful.
+///
+/// # Errors
+///
+/// Returns `Error::ParseError` if the parameters could not be parsed.
 #[init(
     contract = "rwa_security_nft",
     event = "super::event::Event",
@@ -44,6 +53,11 @@ pub fn init(
     Ok(state)
 }
 
+/// Returns the address of the identity registry contract.
+///
+/// # Returns
+///
+/// Returns `ContractResult<ContractAddress>` containing the address of the identity registry contract.
 #[receive(
     contract = "rwa_security_nft",
     name = "identityRegistry",
@@ -56,6 +70,11 @@ pub fn identity_registry(
     Ok(host.state().holders_security_state().identity_registry())
 }
 
+/// Returns the address of the compliance contract.
+///
+/// # Returns
+///
+/// Returns `ContractResult<ContractAddress>` containing the address of the compliance contract.
 #[receive(contract = "rwa_security_nft", name = "compliance", return_value = "ContractAddress")]
 pub fn compliance(_: &ReceiveContext, host: &Host<State>) -> ContractResult<ContractAddress> {
     Ok(host.state().holders_security_state().compliance())

@@ -7,7 +7,9 @@ use super::{
 };
 
 pub enum RecoveryError {
+    /// The address has already been recovered.
     AddressAlreadyRecovered,
+    /// The new address already has frozen balances.
     InvalidRecoveryAddress,
 }
 
@@ -35,15 +37,42 @@ impl<T: IsTokenId + Copy, A: IsTokenAmount, S: HasStateApi> AddressesSecuritySta
     }
 
     /// Returns the recovery address for the given address if it exists.
+    /// Retrieves the recovery address associated with the given address.
+    ///
+    /// # Arguments
+    ///
+    /// * `address` - The address for which to retrieve the recovery address.
+    ///
+    /// # Returns
+    ///
+    /// An `Option<Address>` representing the recovery address, or `None` if no recovery address is found.
     pub fn get_recovery_address(&self, address: &Address) -> Option<Address> {
         self.recovery_addresses.get(address).map(|a| *a)
     }
 
     /// Sets the recovery address for the given address.
+    /// Sets the recovery address for a given address in the holders security state.
+    ///
+    /// # Arguments
+    ///
+    /// * `address` - The address for which the recovery address is being set.
+    /// * `recovery_address` - The recovery address to be set.
     fn set_recovery_address(&mut self, address: Address, recovery_address: Address) {
         self.recovery_addresses.insert(address, recovery_address);
     }
 
+    /// Removes the recovery address of the given address and sets it to the new address.
+    /// Also transfers any frozen balances from the old address to the new address.
+    ///
+    /// # Arguments
+    ///
+    /// * `address` - The address to remove the recovery address from.
+    /// * `new_address` - The new address to set as the recovery address.
+    ///
+    /// # Errors
+    ///
+    /// Returns `RecoveryError::AddressAlreadyRecovered` if the address has already been recovered.
+    /// Returns `RecoveryError::InvalidRecoveryAddress` if the new address already has frozen balances.
     pub fn recover(&mut self, address: Address, new_address: Address) -> Result<(), RecoveryError> {
         // The input address should not already have a recovery address.
         ensure!(
@@ -61,17 +90,24 @@ impl<T: IsTokenId + Copy, A: IsTokenAmount, S: HasStateApi> AddressesSecuritySta
         Ok(())
     }
 
-    /// Gets the identity registry contract address.
+    /// Returns the address of the identity registry contract.
     pub fn identity_registry(&self) -> ContractAddress {
         self.identity_registry
     }
 
-    /// Gets the compliance contract address.
+    /// Returns the address of the compliance contract.
     pub fn compliance(&self) -> ContractAddress {
         self.compliance
     }
 
-    /// Adds amount to the frozen balance of the given address.
+    /// Adds a specified amount to the frozen balance of a given address.
+    ///
+    /// # Arguments
+    ///
+    /// * `address` - The address to freeze the balance for.
+    /// * `token_id` - The ID of the token to freeze.
+    /// * `amount` - The amount to freeze.
+    /// * `state_builder` - A mutable reference to the state builder.
     pub fn freeze(
         &mut self,
         address: Address,
@@ -85,7 +121,13 @@ impl<T: IsTokenId + Copy, A: IsTokenAmount, S: HasStateApi> AddressesSecuritySta
             .add(token_id, amount)
     }
 
-    /// Subtracts amount from the frozen balance of the given address.
+    /// Subtracts a specified amount from the frozen balance of a given address.
+    ///
+    /// # Arguments
+    ///
+    /// * `address` - The address to unfreeze the balance for.
+    /// * `token_id` - The ID of the token to unfreeze.
+    /// * `amount` - The amount to unfreeze.
     pub fn un_freeze(&mut self, address: Address, token_id: T, amount: A) -> HolderStateResult<()> {
         self.frozen_balances
             .entry(address)
@@ -93,7 +135,12 @@ impl<T: IsTokenId + Copy, A: IsTokenAmount, S: HasStateApi> AddressesSecuritySta
             .sub(token_id, amount)
     }
 
-    /// Returns the frozen balance of the given address.
+    /// Returns the frozen balance of a given address for a specific token.
+    ///
+    /// # Arguments
+    ///
+    /// * `address` - The address to get the frozen balance for.
+    /// * `token_id` - The ID of the token to get the frozen balance for.
     pub fn balance_of_frozen(&self, address: &Address, token_id: &T) -> A {
         self.frozen_balances
             .get(address)

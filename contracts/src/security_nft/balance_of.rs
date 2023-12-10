@@ -5,6 +5,15 @@ use crate::utils::{holders_state::HasHoldersState, tokens_state::HasTokensState}
 
 use super::{state::State, types::*};
 
+// Returns the balance of the given token for the given addresses.
+///
+/// # Returns
+///
+/// Returns `ContractResult<BalanceOfQueryResponse<TokenAmount>>` containing the balance of the given token for the given addresses.
+///
+/// # Errors
+///
+/// Returns `Error::TokenDoesNotExist` if the token does not exist.
 #[receive(
     contract = "rwa_security_nft",
     name = "balanceOf",
@@ -12,7 +21,6 @@ use super::{state::State, types::*};
     return_value = "BalanceOfQueryResponse<TokenAmount>",
     error = "super::error::Error"
 )]
-/// Returns the balance of the given token for the given addresses.
 pub fn balance_of(
     ctx: &ReceiveContext,
     host: &Host<State>,
@@ -24,9 +32,10 @@ pub fn balance_of(
     let res: Result<Vec<_>, _> = queries
         .iter()
         .map(|q| {
-            state.tokens_state().ensure_token_exists(&q.token_id).and_then(|_| {
-                Ok(state.holders_state().balance_of(&q.address, &q.token_id))
-            })
+            state
+                .tokens_state()
+                .ensure_token_exists(&q.token_id)
+                .and_then(|_| Ok(state.holders_state().balance_of(&q.address, &q.token_id)))
         })
         .collect();
 

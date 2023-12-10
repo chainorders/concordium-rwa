@@ -34,6 +34,7 @@ impl From<ContractMetadataUrl> for MetadataUrl {
     }
 }
 
+/// Trait implementation for a NFT token amount.
 impl IsTokenAmount for TokenAmount {
     fn zero() -> Self {
         TokenAmountU8(0)

@@ -9,6 +9,14 @@ use super::{
 };
 
 /// Retrieves the metadata for a token.
+///
+/// # Returns
+///
+/// Returns `ContractResult<TokenMetadataQueryResponse>` containing the metadata for each queried token.
+///
+/// # Errors
+///
+/// This method will return a `ParseError` if it fails to parse the input parameters.
 #[receive(
     contract = "rwa_security_nft",
     name = "tokenMetadata",

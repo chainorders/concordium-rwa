@@ -4,13 +4,17 @@ use crate::utils::agents_state::HasAgentsState;
 
 use super::{error::*, event::*, state::State, types::*};
 
+/// Returns the list of agents.
+///
+/// # Returns
+///
+/// Returns `ContractResult<Vec<Address>>` containing the list of agents.
 #[receive(
     contract = "rwa_security_nft",
     name = "isAgent",
     parameter = "Address",
     error = "super::error::Error"
 )]
-/// Returns true if the given address is an agent.
 pub fn is_agent(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<bool> {
     let address: Address = ctx.parameter_cursor().get()?;
     Ok(host.state().agent_state().is_agent(&address))
@@ -27,6 +31,15 @@ pub fn agents(_ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<Vec<A
     Ok(host.state().agent_state().get_agents())
 }
 
+/// Adds the given address as an agent.
+///
+/// # Returns
+///
+/// Returns `ContractResult<()>` indicating whether the operation was successful.
+///
+/// # Errors
+///
+/// Returns `Error::Unauthorized` if the sender does not match the owner.
 #[receive(
     contract = "rwa_security_nft",
     name = "addAgent",
@@ -35,7 +48,6 @@ pub fn agents(_ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<Vec<A
     parameter = "Address",
     error = "super::error::Error"
 )]
-/// Adds the given address as an agent.
 pub fn add_agent(
     ctx: &ReceiveContext,
     host: &mut Host<State>,
@@ -51,6 +63,15 @@ pub fn add_agent(
     Ok(())
 }
 
+/// Removes the given address as an agent.
+///
+/// # Returns
+///
+/// Returns `ContractResult<()>` indicating whether the operation was successful.
+///
+/// # Errors
+///
+/// Returns `Error::Unauthorized` if the sender does not match the owner.
 #[receive(
     contract = "rwa_security_nft",
     name = "removeAgent",
@@ -59,7 +80,6 @@ pub fn add_agent(
     parameter = "Address",
     error = "super::error::Error"
 )]
-/// Removes the given address as an agent.
 pub fn remove_agent(
     ctx: &ReceiveContext,
     host: &mut Host<State>,
