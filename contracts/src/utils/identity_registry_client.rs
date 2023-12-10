@@ -14,4 +14,14 @@ impl IdentityRegistryClient {
 
         Ok(true)
     }
+
+    pub fn is_same(
+        &self,
+        _lost_account: Address,
+        _new_account: Address,
+    ) -> Result<bool, IdentityRegistryError> {
+        // todo: implement using real function
+
+        Ok(true)
+    }
 }

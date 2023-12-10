@@ -15,8 +15,8 @@ concordium-std = { workspace = true, default-features = false }
 concordium-cis2 = { workspace = true, default-features = false }
 hex = "0.4.3"
 
-[dev-dependencies]
-# concordium-smart-contract-testing = { version = "3.2.0" }
+# [dev-dependencies]
+# concordium-smart-contract-testing = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "rlib"]

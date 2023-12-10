@@ -9,6 +9,7 @@ pub type TokenId = TokenIdU8;
 pub type TokenAmount = TokenAmountU8;
 pub type ContractResult<R> = Result<R, Error>;
 
+/// Represents the metadata URL and hash of a token.
 #[derive(SchemaType, Serial, Clone, Deserial)]
 pub struct ContractMetadataUrl {
     pub url: String,
