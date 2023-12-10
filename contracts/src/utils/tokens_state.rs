@@ -46,10 +46,10 @@ pub trait IsTokenAmount:
     }
 
     /// Adds the given amount to self. Returns None if the amount is too large.
-    fn checked_add_assign(&mut self, other: Self) -> Option<&mut Self> {
+    fn checked_add_assign(&mut self, other: Self) -> Option<()> {
         if other.le(&Self::max_value().sub(*self)) {
             self.add_assign(other);
-            Some(self)
+            Some(())
         } else {
             None
         }
@@ -59,7 +59,6 @@ pub trait IsTokenAmount:
 pub enum TokenStateError {
     TokenAlreadyExists,
     TokenDoesNotExist,
-    AmountTooLarge,
 }
 
 pub type TokenStateResult<T> = Result<T, TokenStateError>;
@@ -73,7 +72,8 @@ impl<T: IsTokenId, S: HasStateApi> TokensState<T, S> {
 
     /// Returns true if the token with the given id exists.
     pub fn ensure_token_exists(&self, token_id: &T) -> TokenStateResult<()> {
-        self.tokens.get(token_id).ok_or(TokenStateError::TokenDoesNotExist).map(|_| ())
+        self.tokens.get(token_id).ok_or(TokenStateError::TokenDoesNotExist)?;
+        Ok(())
     }
 
     /// Returns the metadata url of the token with the given id.

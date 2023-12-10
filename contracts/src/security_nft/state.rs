@@ -1,13 +1,36 @@
 use crate::utils::{
     agents_state::{AgentsState, HasAgentsState},
-    holders_security_state::{AddressesSecurityState, HasHoldersSecurityState},
-    holders_state::{HasHoldersState, HoldersState},
+    holders_security_state::{AddressesSecurityState, HasHoldersSecurityState, RecoveryError},
+    holders_state::{HasHoldersState, HolderStateError, HoldersState},
     tokens_security_state::{HasTokensSecurityState, TokensSecurityState},
-    tokens_state::{HasTokensState, TokenStateResult, TokensState},
+    tokens_state::{HasTokensState, TokenStateError, TokensState},
 };
 
 use super::types::{TokenAmount, TokenId};
 use concordium_std::{ops::Sub, *};
+
+pub enum StateError {
+    TokenStateError(TokenStateError),
+    RecoveryError(RecoveryError),
+    HolderStateError(HolderStateError),
+}
+impl From<TokenStateError> for StateError {
+    fn from(e: TokenStateError) -> Self {
+        StateError::TokenStateError(e)
+    }
+}
+
+impl From<RecoveryError> for StateError {
+    fn from(e: RecoveryError) -> Self {
+        StateError::RecoveryError(e)
+    }
+}
+
+impl From<HolderStateError> for StateError {
+    fn from(e: HolderStateError) -> Self {
+        StateError::HolderStateError(e)
+    }
+}
 
 #[derive(Serial, DeserialWithState)]
 #[concordium(state_parameter = "S")]
@@ -75,13 +98,19 @@ impl<S: HasStateApi> State<S> {
         self.token_id.0 += 1;
     }
 
+    pub fn recover(&mut self, address: Address, new_address: Address) -> Result<(), StateError> {
+        self.holders_state_mut().recover(address, new_address)?;
+        self.holders_security_state_mut().recover(address, new_address)?;
+        Ok(())
+    }
+
     /// Mints a new token with the given metadata url and given balances. Returns the token id.
     pub fn mint_token(
         &mut self,
         metadata_url: MetadataUrl,
         balances: Vec<(Address, TokenAmount)>,
         state_builder: &mut StateBuilder<S>,
-    ) -> TokenStateResult<TokenId> {
+    ) -> Result<TokenId, StateError> {
         let token_id = self.get_token_id();
         self.tokens_state_mut().add_token(token_id, metadata_url)?;
         for (address, amount) in balances {

@@ -1,7 +1,12 @@
 use concordium_cis2::IsTokenId;
 use concordium_std::*;
 
-use super::tokens_state::{IsTokenAmount, TokenStateError, TokenStateResult};
+use super::{holders_security_state::RecoveryError, tokens_state::IsTokenAmount};
+
+pub enum HolderStateError {
+    AmountTooLarge,
+}
+pub type HolderStateResult<T> = Result<T, HolderStateError>;
 
 #[derive(Serial, DeserialWithState)]
 #[concordium(state_parameter = "S")]
@@ -20,14 +25,14 @@ impl<T: IsTokenId + Copy, A: IsTokenAmount, S: HasStateApi> HolderBalances<T, A,
         self.balances.get(token_id).map(|a| *a).unwrap_or(A::zero())
     }
 
-    pub fn sub(&mut self, token_id: T, amount: A) -> TokenStateResult<()> {
+    pub fn sub(&mut self, token_id: T, amount: A) -> HolderStateResult<()> {
         let amount = self
             .balances
             .entry(token_id)
-            .occupied_or(TokenStateError::AmountTooLarge)?
+            .occupied_or(HolderStateError::AmountTooLarge)?
             .try_modify(|e| {
-                e.checked_sub_assign(amount).ok_or(TokenStateError::AmountTooLarge).copied()
-            })?;
+            e.checked_sub_assign(amount).ok_or(HolderStateError::AmountTooLarge).copied()
+        })?;
 
         if A::zero().eq(&amount) {
             self.balances.remove(&token_id);
@@ -36,10 +41,11 @@ impl<T: IsTokenId + Copy, A: IsTokenAmount, S: HasStateApi> HolderBalances<T, A,
         Ok(())
     }
 
-    pub fn add(&mut self, token_id: T, amount: A) -> TokenStateResult<()> {
-        self.balances.entry(token_id).or_insert_with(|| A::zero()).try_modify(|e| {
-            e.checked_add_assign(amount).ok_or(TokenStateError::AmountTooLarge).map(|_| ())
-        })
+    pub fn add(&mut self, token_id: T, amount: A) -> HolderStateResult<()> {
+        self.balances
+            .entry(token_id)
+            .or_insert_with(|| A::zero())
+            .try_modify(|e| e.checked_add_assign(amount).ok_or(HolderStateError::AmountTooLarge))
     }
 }
 
@@ -75,13 +81,12 @@ impl<T: IsTokenId + Copy, A: IsTokenAmount, S: HasStateApi> HolderState<T, A, S>
         self.balances.balance_of(token_id)
     }
 
-    pub fn sub(&mut self, token_id: T, amount: A) -> TokenStateResult<()> {
+    pub fn sub(&mut self, token_id: T, amount: A) -> HolderStateResult<()> {
         self.balances.sub(token_id, amount)
     }
 
-    pub fn add(&mut self, token_id: T, amount: A) -> TokenStateResult<&mut Self> {
-        self.balances.add(token_id, amount)?;
-        Ok(self)
+    pub fn add(&mut self, token_id: T, amount: A) -> HolderStateResult<()> {
+        self.balances.add(token_id, amount)
     }
 }
 
@@ -131,13 +136,11 @@ impl<T: IsTokenId + Copy, A: IsTokenAmount, S: HasStateApi> HoldersState<T, A, S
         token_id: T,
         amount: A,
         state_builder: &mut StateBuilder<S>,
-    ) -> TokenStateResult<&mut Self> {
+    ) -> HolderStateResult<()> {
         self.addresses
             .entry(address)
             .or_insert_with(|| HolderState::new(state_builder))
-            .add(token_id, amount)?;
-
-        Ok(self)
+            .add(token_id, amount)
     }
 
     pub fn sub_balance(
@@ -145,10 +148,10 @@ impl<T: IsTokenId + Copy, A: IsTokenAmount, S: HasStateApi> HoldersState<T, A, S
         address: Address,
         token_id: T,
         amount: A,
-    ) -> TokenStateResult<()> {
+    ) -> HolderStateResult<()> {
         self.addresses
             .entry(address)
-            .occupied_or(TokenStateError::AmountTooLarge)?
+            .occupied_or(HolderStateError::AmountTooLarge)?
             .try_modify(|address| address.sub(token_id, amount))
     }
 
@@ -159,16 +162,23 @@ impl<T: IsTokenId + Copy, A: IsTokenAmount, S: HasStateApi> HoldersState<T, A, S
         token_id: T,
         amount: A,
         state_builder: &mut StateBuilder<S>,
-    ) -> TokenStateResult<()> {
-        self.addresses
-            .entry(from)
-            .and_try_modify(|address| address.sub(token_id, amount).map(|_| ()))?;
-
+    ) -> HolderStateResult<()> {
+        self.addresses.entry(from).and_try_modify(|address| address.sub(token_id, amount))?;
         self.addresses
             .entry(to)
             .or_insert_with(|| HolderState::new(state_builder))
-            .add(token_id, amount)?;
+            .add(token_id, amount)
+    }
 
+    /// Transfers state from one address to another.
+    pub fn recover(&mut self, address: Address, new_address: Address) -> Result<(), RecoveryError> {
+        let state = self
+            .addresses
+            .remove_and_get(&address)
+            .and_then(|holder_state| self.addresses.insert(new_address, holder_state));
+
+        // new address should already not have a state
+        ensure!(state.is_none(), RecoveryError::InvalidRecoveryAddress);
         Ok(())
     }
 }

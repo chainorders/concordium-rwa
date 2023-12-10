@@ -2,8 +2,8 @@ use concordium_cis2::Cis2Error;
 use concordium_std::*;
 
 use crate::utils::{
-    compliance_client::ComplianceError, identity_registry_client::IdentityRegistryError,
-    tokens_state::TokenStateError,
+    compliance_client::ComplianceError, holders_state::HolderStateError,
+    identity_registry_client::IdentityRegistryError, tokens_state::TokenStateError,
 };
 
 pub type Error = Cis2Error<CustomContractError>;
@@ -22,12 +22,11 @@ pub enum CustomContractError {
     ComplianceError,
     /// There was an error Invoking a contract
     CallContractError,
-    /// The owner account address is Frozen
-    FrozenWallet,
     /// The token is paused
     PausedToken,
     /// The amount for NFT is not 1
     InvalidAmount,
+    InvalidAddress,
 }
 
 impl From<CustomContractError> for Error {
@@ -66,12 +65,26 @@ impl From<LogError> for CustomContractError {
     }
 }
 
-impl From<TokenStateError> for Cis2Error<CustomContractError> {
-    fn from(value: TokenStateError) -> Self {
+impl From<super::state::StateError> for Error {
+    fn from(value: super::state::StateError) -> Self {
         match value {
-            TokenStateError::TokenAlreadyExists => Cis2Error::InvalidTokenId,
-            TokenStateError::TokenDoesNotExist => Cis2Error::InvalidTokenId,
-            TokenStateError::AmountTooLarge => Cis2Error::InsufficientFunds,
+            super::state::StateError::TokenStateError(e) => e.into(),
+            super::state::StateError::RecoveryError(_) => {
+                Error::Custom(CustomContractError::InvalidAddress)
+            }
+            super::state::StateError::HolderStateError(e) => e.into(),
         }
+    }
+}
+
+impl From<HolderStateError> for Error {
+    fn from(_: HolderStateError) -> Self {
+        Error::InsufficientFunds
+    }
+}
+
+impl From<TokenStateError> for Error {
+    fn from(_: TokenStateError) -> Self {
+        Error::InvalidTokenId
     }
 }

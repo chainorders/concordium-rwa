@@ -2,9 +2,14 @@ use concordium_cis2::IsTokenId;
 use concordium_std::*;
 
 use super::{
-    holders_state::HolderBalances,
-    tokens_state::{IsTokenAmount, TokenStateError, TokenStateResult},
+    holders_state::{HolderBalances, HolderStateError, HolderStateResult},
+    tokens_state::IsTokenAmount,
 };
+
+pub enum RecoveryError {
+    AddressAlreadyRecovered,
+    InvalidRecoveryAddress,
+}
 
 #[derive(Serial, DeserialWithState)]
 #[concordium(state_parameter = "S")]
@@ -35,8 +40,25 @@ impl<T: IsTokenId + Copy, A: IsTokenAmount, S: HasStateApi> AddressesSecuritySta
     }
 
     /// Sets the recovery address for the given address.
-    pub fn set_recovery_address(&mut self, address: Address, recovery_address: Address) {
+    fn set_recovery_address(&mut self, address: Address, recovery_address: Address) {
         self.recovery_addresses.insert(address, recovery_address);
+    }
+
+    pub fn recover(&mut self, address: Address, new_address: Address) -> Result<(), RecoveryError> {
+        // The input address should not already have a recovery address.
+        ensure!(
+            self.get_recovery_address(&address).is_none(),
+            RecoveryError::AddressAlreadyRecovered
+        );
+        let frozen_balances = self
+            .frozen_balances
+            .remove_and_get(&address)
+            .and_then(|frozen_balances| self.frozen_balances.insert(new_address, frozen_balances));
+        // If the address has frozen balances, then the new address must not have any.
+        ensure!(frozen_balances.is_none(), RecoveryError::InvalidRecoveryAddress);
+        self.set_recovery_address(address, new_address);
+
+        Ok(())
     }
 
     /// Gets the identity registry contract address.
@@ -56,7 +78,7 @@ impl<T: IsTokenId + Copy, A: IsTokenAmount, S: HasStateApi> AddressesSecuritySta
         token_id: T,
         amount: A,
         state_builder: &mut StateBuilder<S>,
-    ) -> TokenStateResult<()> {
+    ) -> HolderStateResult<()> {
         self.frozen_balances
             .entry(address)
             .or_insert_with(|| HolderBalances::new(state_builder))
@@ -64,10 +86,10 @@ impl<T: IsTokenId + Copy, A: IsTokenAmount, S: HasStateApi> AddressesSecuritySta
     }
 
     /// Subtracts amount from the frozen balance of the given address.
-    pub fn un_freeze(&mut self, address: Address, token_id: T, amount: A) -> TokenStateResult<()> {
+    pub fn un_freeze(&mut self, address: Address, token_id: T, amount: A) -> HolderStateResult<()> {
         self.frozen_balances
             .entry(address)
-            .occupied_or(TokenStateError::AmountTooLarge)?
+            .occupied_or(HolderStateError::AmountTooLarge)?
             .sub(token_id, amount)
     }
 
