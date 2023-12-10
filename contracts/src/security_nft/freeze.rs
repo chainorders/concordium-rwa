@@ -1,11 +1,9 @@
-use std::ops::Sub;
-
 use concordium_cis2::{IsTokenAmount, IsTokenId};
 use concordium_std::*;
 
 use crate::utils::{
     agents_state::HasAgentsState,
-    tokens_security_state::HasTokensSecurityState,
+    holders_security_state::HasHoldersSecurityState,
     tokens_state::{HasTokensState, TokenStateResult},
 };
 
@@ -57,15 +55,14 @@ pub fn freeze(
         tokens,
     }: FreezeParams<TokenId, TokenAmount> = ctx.parameter_cursor().get()?;
     for token in tokens {
-        let un_frozen_balance = state
-            .tokens_state()
-            .balance_of(&token.token_id, &owner)?
-            .sub(state.security_tokens_state().balance_of_frozen(&token.token_id, &owner));
+        ensure!(
+            state.unfrozen_balance_of(&owner, &token.token_id).ge(&token.token_amount),
+            Error::InsufficientFunds
+        );
 
-        ensure!(un_frozen_balance.ge(&token.token_amount), Error::InsufficientFunds);
-        state.security_tokens_state_mut().freeze(
-            token.token_id,
+        state.holders_security_state_mut().freeze(
             owner,
+            token.token_id,
             token.token_amount,
             state_builder,
         )?;
@@ -102,7 +99,7 @@ pub fn un_freeze(
         tokens,
     }: FreezeParams<TokenId, TokenAmount> = ctx.parameter_cursor().get()?;
     for token in tokens {
-        state.security_tokens_state_mut().un_freeze(token.token_id, owner, token.token_amount)?;
+        state.holders_security_state_mut().un_freeze(owner, token.token_id, token.token_amount)?;
         logger.log(&Event::TokensUnFrozen(TokensFrozen {
             token_id: token.token_id,
             amount: token.token_amount,
@@ -134,10 +131,9 @@ pub fn balance_of_frozen(
     let tokens = token_ids
         .iter()
         .map(|token_id| {
-            state
-                .tokens_state()
-                .ensure_token_exists(&token_id)
-                .and_then(|_| Ok(state.security_tokens_state().balance_of_frozen(token_id, &owner)))
+            state.tokens_state().ensure_token_exists(&token_id).and_then(|_| {
+                Ok(state.holders_security_state().balance_of_frozen(&owner, token_id))
+            })
         })
         .collect::<TokenStateResult<Vec<_>>>()?;
 
@@ -164,16 +160,8 @@ pub fn balance_of_un_frozen(
         tokens: token_ids,
     }: FrozenParams<TokenId> = ctx.parameter_cursor().get()?;
 
-    let tokens = token_ids
-        .iter()
-        .map(|token_id| {
-            let un_frozen_balance = state
-                .tokens_state()
-                .balance_of(&token_id, &owner)?
-                .sub(state.security_tokens_state().balance_of_frozen(&token_id, &owner));
-            Ok(un_frozen_balance)
-        })
-        .collect::<TokenStateResult<Vec<_>>>()?;
+    let tokens =
+        token_ids.iter().map(|token_id| state.unfrozen_balance_of(&owner, &token_id)).collect();
 
     Ok(FrozenResponse {
         tokens,

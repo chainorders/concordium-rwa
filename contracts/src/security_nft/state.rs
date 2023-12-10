@@ -1,28 +1,29 @@
 use crate::utils::{
     agents_state::{AgentsState, HasAgentsState},
-    operators_state::{HasOperatorsState, OperatorsState},
+    holders_security_state::{AddressesSecurityState, HasHoldersSecurityState},
+    holders_state::{HasHoldersState, HoldersState},
     tokens_security_state::{HasTokensSecurityState, TokensSecurityState},
-    tokens_state::{HasTokensState, TokensState},
+    tokens_state::{HasTokensState, TokenStateResult, TokensState},
 };
 
 use super::types::{TokenAmount, TokenId};
-use concordium_std::*;
+use concordium_std::{ops::Sub, *};
 
 #[derive(Serial, DeserialWithState)]
 #[concordium(state_parameter = "S")]
 pub struct State<S = StateApi> {
     /// Agents State
     agents_state: AgentsState<S>,
-    /// CIS2 Address State
-    operators_state: OperatorsState<S>,
     /// CIS2 token state
-    tokens_state: TokensState<TokenId, TokenAmount, S>,
+    tokens_state: TokensState<TokenId, S>,
     /// Token Security State
-    tokens_security_state: TokensSecurityState<TokenId, TokenAmount, S>,
+    tokens_security_state: TokensSecurityState<TokenId, S>,
+    /// Address Security State
+    holders_security_state: AddressesSecurityState<TokenId, TokenAmount, S>,
+    /// Token Addresses State
+    holders_state: HoldersState<TokenId, TokenAmount, S>,
 
     sponsors: StateSet<ContractAddress, S>,
-    identity_registry: ContractAddress,
-    compliance: ContractAddress,
     token_id: TokenId,
 }
 
@@ -36,12 +37,14 @@ impl<S: HasStateApi> State<S> {
     ) -> Self {
         let mut state = State {
             agents_state: AgentsState::new(agents, state_builder),
-            operators_state: OperatorsState::new(state_builder),
             tokens_state: TokensState::new(state_builder),
             tokens_security_state: TokensSecurityState::new(state_builder),
-
-            identity_registry,
-            compliance,
+            holders_security_state: AddressesSecurityState::new(
+                identity_registry,
+                compliance,
+                state_builder,
+            ),
+            holders_state: HoldersState::new(state_builder),
             sponsors: state_builder.new_set(),
             token_id: 0.into(),
         };
@@ -64,20 +67,36 @@ impl<S: HasStateApi> State<S> {
         }
     }
 
-    pub fn get_identity_registry(&self) -> ContractAddress {
-        self.identity_registry
-    }
-
-    pub fn get_compliance(&self) -> ContractAddress {
-        self.compliance
-    }
-
     pub fn get_token_id(&self) -> TokenId {
         self.token_id
     }
 
     pub fn increment_token_id(&mut self) {
         self.token_id.0 += 1;
+    }
+
+    /// Mints a new token with the given metadata url and given balances. Returns the token id.
+    pub fn mint_token(
+        &mut self,
+        metadata_url: MetadataUrl,
+        balances: Vec<(Address, TokenAmount)>,
+        state_builder: &mut StateBuilder<S>,
+    ) -> TokenStateResult<TokenId> {
+        let token_id = self.get_token_id();
+        self.tokens_state_mut().add_token(token_id, metadata_url)?;
+        for (address, amount) in balances {
+            self.holders_state_mut().add_balance(address, token_id, amount, state_builder)?;
+        }
+        self.increment_token_id();
+
+        Ok(token_id)
+    }
+
+    /// Returns the unfrozen balance of the given token for the given addresses.
+    pub fn unfrozen_balance_of(&self, address: &Address, token_id: &TokenId) -> TokenAmount {
+        let balance = self.holders_state().balance_of(address, token_id);
+        let frozen_balance = self.holders_security_state().balance_of_frozen(address, token_id);
+        balance.sub(frozen_balance)
     }
 }
 
@@ -91,32 +110,44 @@ impl<S> HasAgentsState<S> for State<S> {
     }
 }
 
-impl<S> HasOperatorsState<S> for State<S> {
-    fn operators_state(&self) -> &OperatorsState<S> {
-        &self.operators_state
-    }
-
-    fn operators_state_mut(&mut self) -> &mut OperatorsState<S> {
-        &mut self.operators_state
-    }
-}
-
 impl<S> HasTokensState<TokenId, TokenAmount, S> for State<S> {
-    fn tokens_state(&self) -> &TokensState<TokenId, TokenAmount, S> {
+    fn tokens_state(&self) -> &TokensState<TokenId, S> {
         &self.tokens_state
     }
 
-    fn tokens_state_mut(&mut self) -> &mut TokensState<TokenId, TokenAmount, S> {
+    fn tokens_state_mut(&mut self) -> &mut TokensState<TokenId, S> {
         &mut self.tokens_state
     }
 }
 
-impl<S> HasTokensSecurityState<TokenId, TokenAmount, S> for State<S> {
-    fn security_tokens_state(&self) -> &TokensSecurityState<TokenId, TokenAmount, S> {
+impl<S> HasTokensSecurityState<TokenId, S> for State<S> {
+    fn tokens_security_state(&self) -> &TokensSecurityState<TokenId, S> {
         &self.tokens_security_state
     }
 
-    fn security_tokens_state_mut(&mut self) -> &mut TokensSecurityState<TokenId, TokenAmount, S> {
+    fn tokens_security_state_mut(&mut self) -> &mut TokensSecurityState<TokenId, S> {
         &mut self.tokens_security_state
+    }
+}
+
+impl<S> HasHoldersState<TokenId, TokenAmount, S> for State<S> {
+    fn holders_state(&self) -> &HoldersState<TokenId, TokenAmount, S> {
+        &self.holders_state
+    }
+
+    fn holders_state_mut(&mut self) -> &mut HoldersState<TokenId, TokenAmount, S> {
+        &mut self.holders_state
+    }
+}
+
+impl<S> HasHoldersSecurityState<TokenId, TokenAmount, S> for State<S> {
+    fn holders_security_state(&self) -> &AddressesSecurityState<TokenId, TokenAmount, S> {
+        &self.holders_security_state
+    }
+
+    fn holders_security_state_mut(
+        &mut self,
+    ) -> &mut AddressesSecurityState<TokenId, TokenAmount, S> {
+        &mut self.holders_security_state
     }
 }

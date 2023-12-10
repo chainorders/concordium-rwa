@@ -6,7 +6,8 @@ use concordium_std::*;
 
 use crate::utils::{
     agents_state::HasAgentsState, compliance_client::ComplianceClient,
-    identity_registry_client::IdentityRegistryClient, tokens_state::HasTokensState,
+    holders_security_state::HasHoldersSecurityState,
+    identity_registry_client::IdentityRegistryClient,
 };
 
 use super::{error::*, event::*, state::State, types::*};
@@ -48,32 +49,25 @@ pub fn mint(
 
     // The supposed owner of the Token should be verified to hold the token
     // This includes both KYC verification and VC verification
-    let tir = IdentityRegistryClient::new(state.get_identity_registry());
+    let identity_registry =
+        IdentityRegistryClient::new(state.holders_security_state().identity_registry());
     ensure!(
-        tir.is_verified(owner_address)?,
+        identity_registry.is_verified(owner_address)?,
         Error::Custom(CustomContractError::UnVerifiedIdentity)
     );
 
-    let compliance = ComplianceClient::new(state.get_compliance());
+    let compliance = ComplianceClient::new(state.holders_security_state().compliance());
     for MintParam {
         metadata_url,
     } in params.tokens
     {
         let metadata_url: MetadataUrl = metadata_url.into();
         let (state, state_builder) = host.state_and_builder();
-        let token_id = {
-            let token_id = state.get_token_id();
-            state.tokens_state_mut().add_token(
-                token_id,
-                metadata_url.to_owned(),
-                vec![(owner_address, TOKEN_AMOUNT_1)],
-                state_builder,
-            )?;
-            state.increment_token_id();
-
-            token_id
-        };
-
+        let token_id = state.mint_token(
+            metadata_url.to_owned(),
+            vec![(owner_address, TOKEN_AMOUNT_1)],
+            state_builder,
+        )?;
         compliance.minted(token_id, owner_address, TOKEN_AMOUNT_1)?;
         logger.log(&Event::Cis2(Cis2Event::Mint(MintEvent {
             token_id,

@@ -32,7 +32,7 @@ pub fn pause(
     host: &mut Host<State>,
     logger: &mut Logger,
 ) -> ContractResult<()> {
-    let (state, state_builder) = host.state_and_builder();
+    let state = host.state_mut();
     ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
 
     let PauseParams {
@@ -40,7 +40,7 @@ pub fn pause(
     }: PauseParams<TokenId> = ctx.parameter_cursor().get()?;
     for token_id in tokens {
         state.tokens_state().ensure_token_exists(&token_id)?;
-        state.security_tokens_state_mut().pause(token_id, state_builder);
+        state.tokens_security_state_mut().pause(token_id);
         logger.log(&Event::Paused(Paused {
             token_id,
         }))?;
@@ -71,7 +71,7 @@ pub fn un_pause(
     }: PauseParams<TokenId> = ctx.parameter_cursor().get()?;
     for token_id in tokens {
         state.tokens_state().ensure_token_exists(&token_id)?;
-        state.security_tokens_state_mut().un_pause(token_id);
+        state.tokens_security_state_mut().un_pause(token_id);
         logger.log(&Event::UnPaused(Paused {
             token_id,
         }))?;
@@ -99,7 +99,7 @@ pub fn is_paused(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<IsP
     let state = host.state();
     for token_id in tokens {
         state.tokens_state().ensure_token_exists(&token_id)?;
-        res.tokens.push(state.security_tokens_state().is_paused(&token_id))
+        res.tokens.push(state.tokens_security_state().is_paused(&token_id))
     }
 
     Ok(res)

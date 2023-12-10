@@ -4,7 +4,7 @@ use concordium_std::{schema::SchemaType, *};
 use super::types::{TokenAmount, TokenId};
 
 #[derive(Serialize, SchemaType)]
-pub struct AgentUpdatedEvent{
+pub struct AgentUpdatedEvent {
     pub agent: Address,
 }
 
@@ -21,8 +21,20 @@ pub struct Paused<T: IsTokenId + SchemaType> {
 }
 
 #[derive(Serialize, SchemaType)]
+#[concordium(transparent)]
+pub struct IdentityRegistryAdded(pub ContractAddress);
+
+#[derive(Serialize, SchemaType)]
+#[concordium(transparent)]
+pub struct ComplianceAdded(pub ContractAddress);
+
+#[derive(Serialize, SchemaType)]
 #[concordium(repr(u8))]
 pub enum Event {
+    #[concordium(tag = 243)]
+    IdentityRegistryAdded(IdentityRegistryAdded),
+    #[concordium(tag = 244)]
+    ComplianceAdded(ComplianceAdded),
     #[concordium(tag = 245)]
     UnPaused(Paused<TokenId>),
     #[concordium(tag = 246)]

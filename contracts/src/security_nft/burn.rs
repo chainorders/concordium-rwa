@@ -1,13 +1,12 @@
 use concordium_cis2::{BurnEvent, Cis2Event, IsTokenId};
-use concordium_std::{ops::Sub, *};
+use concordium_std::*;
 
 use crate::{
     security_nft::error::CustomContractError,
     utils::{
-        compliance_client::ComplianceClient,
-        operators_state::HasOperatorsState,
-        tokens_security_state::HasTokensSecurityState,
-        tokens_state::{HasTokensState, IsTokenAmount},
+        compliance_client::ComplianceClient, holders_security_state::HasHoldersSecurityState,
+        holders_state::HasHoldersState, tokens_security_state::HasTokensSecurityState,
+        tokens_state::IsTokenAmount,
     },
 };
 
@@ -31,6 +30,15 @@ pub struct BurnParams<T: IsTokenId, A: IsTokenAmount>(
     #[concordium(size_length = 2)] pub Vec<Burn<T, A>>,
 );
 
+/// Burns the supplied amount of tokens for the given token ids.
+#[receive(
+    contract = "rwa_security_nft",
+    name = "burn",
+    parameter = "BurnParams<TokenId, TokenAmount>",
+    error = "super::error::Error",
+    enable_logger,
+    mutable
+)]
 pub fn burn(
     ctx: &ReceiveContext,
     host: &mut Host<State>,
@@ -38,7 +46,7 @@ pub fn burn(
 ) -> ContractResult<()> {
     let sender = ctx.sender();
     let state = host.state_mut();
-    let compliance = ComplianceClient::new(state.get_compliance());
+    let compliance = ComplianceClient::new(state.holders_security_state().compliance());
 
     let BurnParams(burns): BurnParams<TokenId, TokenAmount> = ctx.parameter_cursor().get()?;
     for Burn {
@@ -51,23 +59,19 @@ pub fn burn(
         // Sender is the Owner of the token
         owner.eq(&sender)
         // Sender is an operator of the owner
-        || state.operators_state().is_operator(&owner, &sender)
+        || state.holders_state().is_operator(&owner, &sender)
         // Sender is the sponsor (CIS3) of the transaction 
         || state.is_sponsor(&sender);
         ensure!(is_authorized, Error::Unauthorized);
         ensure!(
-            !state.security_tokens_state().is_paused(&token_id),
+            !state.tokens_security_state().is_paused(&token_id),
             Error::Custom(CustomContractError::PausedToken)
         );
+        ensure!(state.unfrozen_balance_of(&owner, &token_id).ge(&amount), Error::InsufficientFunds);
 
-        let un_frozen_balance = state
-            .tokens_state()
-            .balance_of(&token_id, &owner)?
-            .sub(state.security_tokens_state().balance_of_frozen(&token_id, &owner));
-        ensure!(un_frozen_balance.ge(&amount), Error::InsufficientFunds);
-        state.tokens_state_mut().burn_token(token_id, owner, amount)?;
+        state.holders_state_mut().sub_balance(owner, token_id, amount)?;
+
         compliance.burned(token_id, owner, amount)?;
-
         logger.log(&Event::Cis2(Cis2Event::Burn(BurnEvent {
             amount,
             token_id,

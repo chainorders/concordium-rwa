@@ -1,7 +1,7 @@
 use concordium_cis2::*;
 use concordium_std::*;
 
-use crate::utils::tokens_state::HasTokensState;
+use crate::utils::{holders_state::HasHoldersState, tokens_state::HasTokensState};
 
 use super::{state::State, types::*};
 
@@ -20,9 +20,15 @@ pub fn balance_of(
     let BalanceOfQueryParams {
         queries,
     }: BalanceOfQueryParams<TokenId> = ctx.parameter_cursor().get()?;
-    let state = host.state().tokens_state();
-    let res: Result<Vec<_>, _> =
-        queries.iter().map(|q| state.balance_of(&q.token_id, &q.address)).collect();
+    let state = host.state();
+    let res: Result<Vec<_>, _> = queries
+        .iter()
+        .map(|q| {
+            state.tokens_state().ensure_token_exists(&q.token_id).and_then(|_| {
+                Ok(state.holders_state().balance_of(&q.address, &q.token_id))
+            })
+        })
+        .collect();
 
     Ok(BalanceOfQueryResponse(res?))
 }

@@ -1,7 +1,7 @@
 use concordium_cis2::*;
 use concordium_std::*;
 
-use crate::utils::operators_state::HasOperatorsState;
+use crate::utils::holders_state::HasHoldersState;
 
 use super::{event::Event, state::State, types::ContractResult};
 
@@ -23,7 +23,7 @@ pub fn update_operator(
         0: updates,
     }: UpdateOperatorParams = ctx.parameter_cursor().get()?;
     let (state, state_builder) = host.state_and_builder();
-    let state = state.operators_state_mut();
+    let state = state.holders_state_mut();
     let owner = ctx.sender();
 
     for UpdateOperator {
@@ -62,7 +62,7 @@ pub fn operator_of(
         queries,
     }: OperatorOfQueryParams = ctx.parameter_cursor().get()?;
     let state = host.state();
-    let state = state.operators_state();
+    let state = state.holders_state();
 
     let mut res: OperatorOfQueryResponse =
         OperatorOfQueryResponse(Vec::with_capacity(queries.len()));
@@ -71,7 +71,7 @@ pub fn operator_of(
         address,
     } in queries
     {
-        res.0.push(state.is_operator(&address, &owner))
+        res.0.push(state.is_operator(&owner, &address))
     }
 
     Ok(res)
