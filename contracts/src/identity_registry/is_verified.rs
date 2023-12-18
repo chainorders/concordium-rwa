@@ -1,18 +1,23 @@
 use concordium_std::*;
 
-use crate::utils::clients::cis4_client::{Cis4ContractAddress, CredentialStatus, Cis4Client};
+use crate::utils::clients::cis4_client::{Cis4Client, Cis4ContractAddress, CredentialStatus};
 
 use super::{error::Error, state::State, types::ContractResult};
 
-/// Handles the `isVerified` contract call in the `rwa_identity_registry` contract.
+/// Handles the `isVerified` contract call in the `rwa_identity_registry`
+/// contract.
 ///
-/// This function is called to check if an address is associated with a verified identity. It retrieves the identity associated with the address from the state,
-/// and checks the status of all credentials associated with the identity. If all credentials are active, the identity is considered verified.
+/// This function is called to check if an address is associated with a verified
+/// identity. It retrieves the identity associated with the address from the
+/// state, and checks the status of all credentials associated with the
+/// identity. If all credentials are active, the identity is considered
+/// verified.
 ///
 /// # Errors
 ///
-/// Returns `Error::IdentityNotFound` if the identity associated with the address could not be found.
-/// Returns `Error::ParseError` if the parameters could not be parsed.
+/// Returns `Error::IdentityNotFound` if the identity associated with the
+/// address could not be found. Returns `Error::ParseError` if the parameters
+/// could not be parsed.
 #[receive(
     contract = "rwa_identity_registry",
     name = "isVerified",

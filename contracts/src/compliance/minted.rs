@@ -7,16 +7,18 @@ use crate::{
     },
 };
 
-use super::{state::State, types::ContractResult, error::Error};
+use super::{error::Error, state::State, types::ContractResult};
 
 /// Handles the `minted` event in the `rwa_compliance` contract.
 ///
-/// This function is called when tokens are minted. It iterates over all modules in the state,
-/// and calls the `minted` function on the `ComplianceContract` for each module.
+/// This function is called when tokens are minted. It iterates over all modules
+/// in the state, and calls the `minted` function on the `ComplianceContract`
+/// for each module.
 ///
 /// # Errors
 /// Returns `Error::ParseError` if the parameters could not be parsed.
-/// Returns `Error::Unauthorized` if the sender of the event does not match the contract of the token.
+/// Returns `Error::Unauthorized` if the sender of the event does not match the
+/// contract of the token.
 #[receive(
     contract = "rwa_compliance",
     name = "minted",

@@ -12,8 +12,9 @@ const SUPPORTS_STANDARDS: [StandardIdentifier<'static>; 2] =
 
 /// Handles the `supports` event in the `rwa_compliance` contract.
 ///
-/// This function is called to check if the contract supports a given standard. It iterates over all standards in the `SUPPORTS_STANDARDS` array,
-/// and checks if the queried standard is in the array.
+/// This function is called to check if the contract supports a given standard.
+/// It iterates over all standards in the `SUPPORTS_STANDARDS` array, and checks
+/// if the queried standard is in the array.
 ///
 /// # Errors
 ///

@@ -10,10 +10,12 @@ use super::{state::State, types::ContractResult};
 const SUPPORTS_STANDARDS: [StandardIdentifier<'static>; 2] =
     [CIS0_STANDARD_IDENTIFIER, IDENTITY_REGISTRY_STANDARD_IDENTIFIER];
 
-/// Handles the `supports` contract call in the `rwa_identity_registry` contract.
+/// Handles the `supports` contract call in the `rwa_identity_registry`
+/// contract.
 ///
-/// This function is called to check if the contract supports a given standard. It iterates over all standards in the `SUPPORTS_STANDARDS` array,
-/// and checks if the queried standard is in the array.
+/// This function is called to check if the contract supports a given standard.
+/// It iterates over all standards in the `SUPPORTS_STANDARDS` array, and checks
+/// if the queried standard is in the array.
 ///
 /// # Errors
 ///

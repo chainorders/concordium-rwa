@@ -11,13 +11,15 @@ use super::{error::Error, state::State, types::ContractResult};
 
 /// Handles the `transferred` event in the `rwa_compliance` contract.
 ///
-/// This function is called when tokens are transferred. It iterates over all modules in the state,
-/// and calls the `transferred` function on the `ComplianceContract` for each module.
+/// This function is called when tokens are transferred. It iterates over all
+/// modules in the state, and calls the `transferred` function on the
+/// `ComplianceContract` for each module.
 ///
 /// # Errors
 ///
-/// Returns `Error::Unauthorized` if the sender of the event does not match the contract of the token.
-/// Returns `Error::ParseError` if the parameters could not be parsed.
+/// Returns `Error::Unauthorized` if the sender of the event does not match the
+/// contract of the token. Returns `Error::ParseError` if the parameters could
+/// not be parsed.
 #[receive(
     contract = "rwa_compliance",
     name = "transferred",

@@ -4,13 +4,15 @@ use super::{error::Error, state::State, types::ContractResult};
 
 /// Handles the `isSame` contract call in the `rwa_identity_registry` contract.
 ///
-/// This function is called to check if two addresses are associated with the same identity. It retrieves the identities associated with the addresses from the state,
-/// and checks if they are equal.
+/// This function is called to check if two addresses are associated with the
+/// same identity. It retrieves the identities associated with the addresses
+/// from the state, and checks if they are equal.
 ///
 /// # Errors
 ///
-/// Returns `Error::IdentityNotFound` if the identity associated with either of the addresses could not be found.
-/// Returns `Error::ParseError` if the parameters could not be parsed.
+/// Returns `Error::IdentityNotFound` if the identity associated with either of
+/// the addresses could not be found. Returns `Error::ParseError` if the
+/// parameters could not be parsed.
 #[receive(
     contract = "rwa_identity_registry",
     name = "isSame",

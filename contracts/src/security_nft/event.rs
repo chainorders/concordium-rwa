@@ -2,7 +2,8 @@ use concordium_cis2::{Cis2Event, IsTokenAmount, IsTokenId};
 use concordium_std::{schema::SchemaType, *};
 
 use super::types::{TokenAmount, TokenId};
-/// Represents an event that is triggered when an agent is updated (Added / Removed).
+/// Represents an event that is triggered when an agent is updated (Added /
+/// Removed).
 #[derive(Serialize, SchemaType)]
 pub struct AgentUpdatedEvent {
     pub agent: Address,
@@ -12,8 +13,8 @@ pub struct AgentUpdatedEvent {
 #[derive(Serialize, SchemaType)]
 pub struct TokensFrozen<T: IsTokenId + SchemaType, A: IsTokenAmount + SchemaType> {
     pub token_id: T,
-    pub amount: A,
-    pub address: Address,
+    pub amount:   A,
+    pub address:  Address,
 }
 
 /// Represents the event when a token is paused / unpaused.
@@ -38,7 +39,7 @@ pub struct RecoverEvent {
     /// The address of the lost account.
     pub lost_account: Address,
     /// The address of the new account.
-    pub new_account: Address,
+    pub new_account:  Address,
 }
 
 #[derive(Serialize, SchemaType)]

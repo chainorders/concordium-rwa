@@ -49,11 +49,11 @@ pub mod contract_types {
         /// The ID of the token to transfer.
         pub token_id: Token<T>,
         /// The address to transfer from.
-        pub from: Address,
+        pub from:     Address,
         /// The address to transfer to.
-        pub to: Address,
+        pub to:       Address,
         /// The amount of tokens to transfer.
-        pub amount: A,
+        pub amount:   A,
     }
 
     /// Parameters for the `burned` function.
@@ -62,9 +62,9 @@ pub mod contract_types {
         /// The ID of the token that was burned.
         pub token_id: Token<T>,
         /// The address of the owner of the burned tokens.
-        pub owner: Address,
+        pub owner:    Address,
         /// The amount of tokens that were burned.
-        pub amount: A,
+        pub amount:   A,
     }
 
     /// Parameters for the `minted` function.
@@ -73,9 +73,9 @@ pub mod contract_types {
         /// The ID of the token that was minted.
         pub token_id: Token<T>,
         /// The address of the owner of the minted tokens.
-        pub owner: Address,
+        pub owner:    Address,
         /// The amount of tokens that were minted.
-        pub amount: A,
+        pub amount:   A,
     }
 
     /// Parameters for the `transferred` function.
@@ -84,11 +84,11 @@ pub mod contract_types {
         /// The ID of the token that was transferred.
         pub token_id: Token<T>,
         /// The address of the sender of the transfer.
-        pub from: Address,
+        pub from:     Address,
         /// The address of the receiver of the transfer.
-        pub to: Address,
+        pub to:       Address,
         /// The amount of tokens that were transferred.
-        pub amount: A,
+        pub amount:   A,
     }
 }
 
