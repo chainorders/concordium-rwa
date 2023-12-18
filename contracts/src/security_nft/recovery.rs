@@ -1,8 +1,9 @@
 use concordium_std::*;
 
 use crate::utils::{
-    agents_state::HasAgentsState, holders_security_state::HasHoldersSecurityState,
-    identity_registry_client::IdentityRegistryClient,
+    agents_state::IsAgentsState,
+    clients::identity_registry_client::{IdentityRegistryClient, IdentityRegistryContract},
+    holders_security_state::IHoldersSecurityState,
 };
 
 use super::{error::*, event::*, state::State, types::ContractResult};
@@ -10,7 +11,7 @@ use super::{error::*, event::*, state::State, types::ContractResult};
 #[derive(Serialize, SchemaType)]
 pub struct RecoverParam {
     pub lost_account: Address,
-    pub new_account: Address,
+    pub new_account:  Address,
 }
 
 #[receive(
@@ -31,13 +32,13 @@ pub fn recover(
         new_account,
     }: RecoverParam = ctx.parameter_cursor().get()?;
     let state = host.state_mut();
-    ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
-
-    let identity_registry =
-        IdentityRegistryClient::new(state.holders_security_state().identity_registry());
-
+    ensure!(state.is_agent(&ctx.sender()), Error::Unauthorized);
     ensure!(
-        identity_registry.is_same(lost_account, new_account)?,
+        IdentityRegistryContract(state.identity_registry()).is_same(
+            host,
+            &lost_account,
+            &new_account
+        )?,
         Error::Custom(CustomContractError::UnVerifiedIdentity)
     );
 
@@ -59,5 +60,5 @@ pub fn recover(
 )]
 pub fn is_recovered(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<Option<Address>> {
     let address: Address = ctx.parameter_cursor().get()?;
-    Ok(host.state().holders_security_state().get_recovery_address(&address))
+    Ok(host.state().get_recovery_address(&address))
 }

@@ -1,8 +1,9 @@
 use concordium_std::*;
 
-use crate::utils::holders_security_state::HasHoldersSecurityState;
+use crate::utils::{agents_state::IsAgentsState, holders_security_state::IHoldersSecurityState};
 
 use super::{
+    error::Error,
     event::{ComplianceAdded, Event, IdentityRegistryAdded},
     state::State,
     types::ContractResult,
@@ -11,8 +12,8 @@ use super::{
 #[derive(Serialize, SchemaType)]
 pub struct InitParam {
     pub identity_registry: ContractAddress,
-    pub compliance: ContractAddress,
-    pub sponsors: Vec<ContractAddress>,
+    pub compliance:        ContractAddress,
+    pub sponsors:          Vec<ContractAddress>,
 }
 
 /// Initializes the contract with the given parameters.
@@ -57,7 +58,8 @@ pub fn init(
 ///
 /// # Returns
 ///
-/// Returns `ContractResult<ContractAddress>` containing the address of the identity registry contract.
+/// Returns `ContractResult<ContractAddress>` containing the address of the
+/// identity registry contract.
 #[receive(
     contract = "rwa_security_nft",
     name = "identityRegistry",
@@ -67,15 +69,62 @@ pub fn identity_registry(
     _: &ReceiveContext,
     host: &Host<State>,
 ) -> ContractResult<ContractAddress> {
-    Ok(host.state().holders_security_state().identity_registry())
+    Ok(host.state().identity_registry())
+}
+
+#[receive(
+    contract = "rwa_security_nft",
+    name = "setIdentityRegistry",
+    mutable,
+    enable_logger,
+    parameter = "ContractAddress",
+    error = "super::error::Error"
+)]
+pub fn set_identity_registry(
+    ctx: &ReceiveContext,
+    host: &mut Host<State>,
+    logger: &mut Logger,
+) -> ContractResult<()> {
+    let identity_registry: ContractAddress = ctx.parameter_cursor().get()?;
+    ensure!(host.state().is_agent(&ctx.sender()), Error::Unauthorized);
+
+    // IdentityRegistryClient::new(identity_registry).is_identity_registry()?;
+
+    host.state_mut().set_identity_registry(identity_registry);
+    logger.log(&Event::IdentityRegistryAdded(IdentityRegistryAdded(identity_registry)))?;
+
+    Ok(())
 }
 
 /// Returns the address of the compliance contract.
 ///
 /// # Returns
 ///
-/// Returns `ContractResult<ContractAddress>` containing the address of the compliance contract.
+/// Returns `ContractResult<ContractAddress>` containing the address of the
+/// compliance contract.
 #[receive(contract = "rwa_security_nft", name = "compliance", return_value = "ContractAddress")]
 pub fn compliance(_: &ReceiveContext, host: &Host<State>) -> ContractResult<ContractAddress> {
-    Ok(host.state().holders_security_state().compliance())
+    Ok(host.state().compliance())
+}
+
+#[receive(
+    contract = "rwa_security_nft",
+    name = "setCompliance",
+    mutable,
+    enable_logger,
+    parameter = "ContractAddress",
+    error = "super::error::Error"
+)]
+pub fn set_compliance(
+    ctx: &ReceiveContext,
+    host: &mut Host<State>,
+    logger: &mut Logger,
+) -> ContractResult<()> {
+    let compliance: ContractAddress = ctx.parameter_cursor().get()?;
+    ensure!(host.state().is_agent(&ctx.sender()), Error::Unauthorized);
+
+    host.state_mut().set_compliance(compliance);
+    logger.log(&Event::ComplianceAdded(ComplianceAdded(compliance)))?;
+
+    Ok(())
 }

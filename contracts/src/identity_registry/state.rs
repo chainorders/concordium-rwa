@@ -1,67 +1,102 @@
 use concordium_std::*;
 
-pub type Identity = Vec<(AttributeTag, AttributeValue)>;
-pub type Issuer = ContractAddress;
+use crate::utils::{agents_state::IsAgentsState, clients::contract_client::IContractState};
+
+use super::types::{AttributeTag, AttributeValue, Identity, Issuer};
+
+#[derive(Serial, DeserialWithState, Deletable)]
+#[concordium(state_parameter = "S")]
+pub struct IdentityState<S> {
+    attributes:  StateMap<AttributeTag, AttributeValue, S>,
+    credentials: StateMap<Issuer, PublicKeyEd25519, S>,
+}
+
+impl<S: HasStateApi> IdentityState<S> {
+    pub fn to_identity(&self) -> Identity {
+        Identity {
+            attributes:  self.attributes.iter().map(|i| (*i.0, *i.1)).collect(),
+            credentials: self.credentials.iter().map(|i| (*i.0, *i.1)).collect(),
+        }
+    }
+
+    pub fn credentials(&self) -> Vec<(Issuer, PublicKeyEd25519)> {
+        self.credentials.iter().map(|i| (*i.0, *i.1)).collect()
+    }
+
+    pub fn key(&self, issuer: &Issuer) -> Option<PublicKeyEd25519> {
+        self.credentials.get(issuer).map(|i| *i)
+    }
+}
+
+impl<S: HasStateApi> PartialEq for IdentityState<S> {
+    fn eq(&self, other: &Self) -> bool {
+        for (tag, val) in self.attributes.iter() {
+            let is_attr_same =
+                other.attributes.get(&tag).map(|val2| val.eq(&*val2)).unwrap_or(false);
+            if !is_attr_same {
+                return false;
+            }
+        }
+
+        for (issuer, key) in self.credentials.iter() {
+            let is_cred_same =
+                other.credentials.get(&issuer).map(|key2| key.eq(&*key2)).unwrap_or(false);
+            if !is_cred_same {
+                return false;
+            }
+        }
+
+        true
+    }
+}
+
+impl<S: HasStateApi> IdentityState<S> {
+    pub fn new(identity: Identity, state_builder: &mut StateBuilder<S>) -> Self {
+        let mut ret = Self {
+            attributes:  state_builder.new_map(),
+            credentials: state_builder.new_map(),
+        };
+
+        for (tag, value) in identity.attributes {
+            ret.attributes.insert(tag, value);
+        }
+
+        for (issuer, key) in identity.credentials {
+            ret.credentials.insert(issuer, key);
+        }
+
+        ret
+    }
+}
 
 #[derive(Serial, DeserialWithState)]
 #[concordium(state_parameter = "S")]
 pub struct State<S = StateApi> {
-    identities: StateMap<AccountAddress, StateMap<AttributeTag, AttributeValue, S>, S>,
-    issuers: StateSet<Issuer, S>,
+    pub identities: StateMap<Address, IdentityState<S>, S>,
+    pub issuers:    StateSet<Issuer, S>,
+    pub agents:     StateSet<Address, S>,
 }
 
 impl<S: HasStateApi> State<S> {
     /// Creates a new state.
-    pub fn new(state_builder: &mut StateBuilder<S>) -> Self {
-        State {
+    pub fn new(agents: Vec<Address>, state_builder: &mut StateBuilder<S>) -> Self {
+        let mut state = State {
             identities: state_builder.new_map(),
-            issuers: state_builder.new_set(),
+            issuers:    state_builder.new_set(),
+            agents:     state_builder.new_set(),
+        };
+
+        for agent in agents {
+            state.agents.insert(agent);
         }
-    }
 
-    /// Registers the given identity for the given address.
-    pub fn register_identity(
-        &mut self,
-        address: AccountAddress,
-        identity: Identity,
-        state_builder: &mut StateBuilder<S>,
-    ) {
-        let mut identity_map = state_builder.new_map();
-        for (tag, val) in identity {
-            identity_map.insert(tag, val);
-        }
-        self.identities.insert(address, identity_map);
+        state
     }
+}
 
-    /// Removes the identity of the given address if it exists.
-    pub fn remove_identity(&mut self, address: &AccountAddress) {
-        self.identities.remove(address)
-    }
+impl IContractState for State {}
+impl IsAgentsState<StateApi> for State {
+    fn agents(&self) -> &StateSet<Address, StateApi> { &self.agents }
 
-    /// Returns the identity of the given address if it exists.
-    pub fn get_identity(&self, address: &AccountAddress) -> Option<Identity> {
-        self.identities
-            .get(address)
-            .map(|identity_map| identity_map.iter().map(|i| (*i.0, *i.1)).collect())
-    }
-
-    /// Returns true if the given issuer is registered.
-    pub fn is_issuer(&self, issuer: &Issuer) -> bool {
-        self.issuers.contains(issuer)
-    }
-
-    /// Registers the given issuer
-    pub fn register_issuer(&mut self, issuer: Issuer) {
-        self.issuers.insert(issuer);
-    }
-
-    /// Removes the given issuer
-    pub fn remove_issuer(&mut self, issuer: &Issuer) {
-        self.issuers.remove(issuer);
-    }
-
-    /// Returns registered issuers
-    pub fn get_issuers(&self) -> Vec<Issuer> {
-        self.issuers.iter().map(|i| *i).collect()
-    }
+    fn agents_mut(&mut self) -> &mut StateSet<Address, StateApi> { &mut self.agents }
 }

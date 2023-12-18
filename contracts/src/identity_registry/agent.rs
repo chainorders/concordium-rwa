@@ -10,7 +10,7 @@ use super::{error::*, event::*, state::State, types::*};
 ///
 /// Returns `ContractResult<Vec<Address>>` containing the list of agents.
 #[receive(
-    contract = "rwa_security_nft",
+    contract = "rwa_identity_registry",
     name = "isAgent",
     parameter = "Address",
     error = "super::error::Error"
@@ -21,7 +21,7 @@ pub fn is_agent(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<bool
 }
 
 #[receive(
-    contract = "rwa_security_nft",
+    contract = "rwa_identity_registry",
     name = "agents",
     return_value = "Vec<Address>",
     error = "super::error::Error"
@@ -42,7 +42,7 @@ pub fn agents(_ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<Vec<A
 ///
 /// Returns `Error::Unauthorized` if the sender does not match the owner.
 #[receive(
-    contract = "rwa_security_nft",
+    contract = "rwa_identity_registry",
     name = "addAgent",
     mutable,
     enable_logger,
@@ -56,10 +56,7 @@ pub fn add_agent(
 ) -> ContractResult<()> {
     ensure!(ctx.sender().matches_account(&ctx.owner()), Error::Unauthorized);
     let agent: Address = ctx.parameter_cursor().get()?;
-    ensure!(
-        host.state_mut().add_agent(agent),
-        Error::Custom(CustomContractError::AgentAlreadyExists)
-    );
+    ensure!(host.state_mut().add_agent(agent), Error::AgentAlreadyExists);
     logger.log(&Event::AgentAdded(AgentUpdatedEvent {
         agent,
     }))?;
@@ -78,7 +75,7 @@ pub fn add_agent(
 ///
 /// Returns `Error::Unauthorized` if the sender does not match the owner.
 #[receive(
-    contract = "rwa_security_nft",
+    contract = "rwa_identity_registry",
     name = "removeAgent",
     mutable,
     enable_logger,
@@ -92,10 +89,7 @@ pub fn remove_agent(
 ) -> ContractResult<()> {
     ensure!(ctx.sender().matches_account(&ctx.owner()), Error::Unauthorized);
     let agent: Address = ctx.parameter_cursor().get()?;
-    ensure!(
-        host.state_mut().remove_agent(&agent),
-        Error::Custom(CustomContractError::AgentNotFound)
-    );
+    ensure!(host.state_mut().remove_agent(&agent), Error::AgentNotFound);
     logger.log(&Event::AgentRemoved(AgentUpdatedEvent {
         agent,
     }))?;

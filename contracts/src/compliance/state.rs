@@ -1,27 +1,34 @@
 use concordium_std::*;
 
-#[derive(Serial)]
+use crate::utils::{agents_state::IsAgentsState, clients::contract_client::IContractState};
+
+pub type Module = ContractAddress;
+
+#[derive(Serial, DeserialWithState)]
 #[concordium(state_parameter = "S")]
 pub struct State<S = StateApi> {
-    modules: StateSet<ContractAddress, S>,
+    pub modules: StateSet<Module, S>,
+    pub agents:  StateSet<Address, S>,
 }
 
 impl State {
-    pub fn new(state_builder: &mut StateBuilder) -> Self {
-        Self {
+    pub fn new(modules: Vec<Module>, state_builder: &mut StateBuilder) -> Self {
+        let mut res = Self {
             modules: state_builder.new_set(),
+            agents:  state_builder.new_set(),
+        };
+
+        for module in modules {
+            res.modules.insert(module);
         }
-    }
 
-    pub fn add_module(&mut self, module: ContractAddress) {
-        self.modules.insert(module);
+        res
     }
+}
 
-    pub fn remove_module(&mut self, module: &ContractAddress) {
-        self.modules.remove(module);
-    }
+impl IContractState for State {}
+impl IsAgentsState<StateApi> for State {
+    fn agents(&self) -> &StateSet<Address, StateApi> { &self.agents }
 
-    pub fn has_module(&self, module: &ContractAddress) -> bool {
-        self.modules.contains(module)
-    }
+    fn agents_mut(&mut self) -> &mut StateSet<Address, StateApi> { &mut self.agents }
 }

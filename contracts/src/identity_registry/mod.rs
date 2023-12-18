@@ -1,6 +1,11 @@
+pub mod agent;
 pub mod error;
 pub mod event;
-mod state;
-pub mod types;
+pub mod identities;
 pub mod init;
-pub mod register_identity;
+pub mod is_same;
+pub mod is_verified;
+pub mod issuers;
+mod state;
+pub mod supports;
+mod types;

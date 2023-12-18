@@ -8,6 +8,8 @@ use super::{state::State, types::ContractResult};
     event = "super::event::Event",
     error = "super::error::Error"
 )]
-pub fn init(_: &InitContext, state_builder: &mut StateBuilder) -> ContractResult<State> {
-    Ok(State::new(state_builder))
+pub fn init(ctx: &InitContext, state_builder: &mut StateBuilder) -> ContractResult<State> {
+    let owner = Address::Account(ctx.init_origin());
+
+    Ok(State::new(vec![owner], state_builder))
 }

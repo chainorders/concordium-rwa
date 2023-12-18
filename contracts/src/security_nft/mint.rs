@@ -5,9 +5,13 @@ use concordium_cis2::{
 use concordium_std::*;
 
 use crate::utils::{
-    agents_state::HasAgentsState, compliance_client::ComplianceClient,
-    holders_security_state::HasHoldersSecurityState,
-    identity_registry_client::IdentityRegistryClient,
+    agents_state::IsAgentsState,
+    cis2_state::ICis2State,
+    clients::{
+        compliance_client::{ComplianceContract, IComplianceClient, contract_types::Token},
+        identity_registry_client::{IdentityRegistryClient, IdentityRegistryContract},
+    },
+    holders_security_state::IHoldersSecurityState,
 };
 
 use super::{error::*, event::*, state::State, types::*};
@@ -19,7 +23,7 @@ pub struct MintParam {
 
 #[derive(Serialize, SchemaType)]
 pub struct MintParams {
-    pub owner: Receiver,
+    pub owner:  Receiver,
     pub tokens: Vec<MintParam>,
 }
 
@@ -29,7 +33,8 @@ const TOKEN_AMOUNT_1: TokenAmountU8 = TokenAmountU8(1);
 ///
 /// # Returns
 ///
-/// Returns `ContractResult<()>` indicating whether the operation was successful.
+/// Returns `ContractResult<()>` indicating whether the operation was
+/// successful.
 ///
 /// # Errors
 ///
@@ -50,36 +55,41 @@ pub fn mint(
     host: &mut Host<State>,
     logger: &mut Logger,
 ) -> ContractResult<()> {
-    let state = host.state_mut();
+    let state = host.state();
 
     // Sender of this transaction should be registered as an agent in the contract
-    ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
+    ensure!(state.is_agent(&ctx.sender()), Error::Unauthorized);
 
     let params: MintParams = ctx.parameter_cursor().get()?;
     let owner_address = params.owner.address();
 
-    // The supposed owner of the Token should be verified to hold the token
-    // This includes both KYC verification and VC verification
-    let identity_registry =
-        IdentityRegistryClient::new(state.holders_security_state().identity_registry());
+    state.ensure_not_recovered(&owner_address)?;
     ensure!(
-        identity_registry.is_verified(owner_address)?,
+        IdentityRegistryContract(state.identity_registry()).is_verified(host, &owner_address)?,
         Error::Custom(CustomContractError::UnVerifiedIdentity)
     );
 
-    let compliance = ComplianceClient::new(state.holders_security_state().compliance());
+    let compliance = ComplianceContract(state.compliance());
     for MintParam {
         metadata_url,
     } in params.tokens
     {
         let metadata_url: MetadataUrl = metadata_url.into();
         let (state, state_builder) = host.state_and_builder();
-        let token_id = state.mint_token(
+        let token_id = state.get_token_id();
+        state.mint_token(
+            token_id,
             metadata_url.to_owned(),
             vec![(owner_address, TOKEN_AMOUNT_1)],
             state_builder,
         )?;
-        compliance.minted(token_id, owner_address, TOKEN_AMOUNT_1)?;
+        state.increment_token_id();
+        compliance.minted(
+            host,
+            Token::new(token_id, ctx.self_address()),
+            owner_address,
+            TOKEN_AMOUNT_1,
+        )?;
         logger.log(&Event::Cis2(Cis2Event::Mint(MintEvent {
             token_id,
             amount: TOKEN_AMOUNT_1,

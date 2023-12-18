@@ -1,70 +1,60 @@
-use concordium_std::*;
+use concordium_std::{Address, HasStateApi, StateSet};
 
-/// Represents the state of agents in the system.
-#[derive(Serial, DeserialWithState)]
-#[concordium(state_parameter = "S")]
-pub struct AgentsState<S> {
-    /// A set of agent addresses.
-    agents: StateSet<Address, S>,
-}
+pub type Agent = Address;
 
-impl<S: HasStateApi> AgentsState<S> {
-    /// Creates a new AgentsState.
+/// Trait for managing agents in a state.
+pub trait IsAgentsState<S: HasStateApi> {
+    /// Returns a reference to the set of agents.
     ///
-    /// # Arguments
+    /// # Returns
     ///
-    /// * `agents` - A vector of agent addresses.
-    /// * `state_builder` - A mutable reference to the state builder.
-    pub fn new(agents: Vec<Address>, state_builder: &mut StateBuilder<S>) -> Self {
-        let mut ret = Self {
-            agents: state_builder.new_set(),
-        };
+    /// A reference to the set of agents.
+    fn agents(&self) -> &StateSet<Agent, S>;
 
-        for agent in agents {
-            ret.add_agent(agent);
-        }
-
-        ret
-    }
+    /// Returns a mutable reference to the set of agents.
+    ///
+    /// # Returns
+    ///
+    /// A mutable reference to the set of agents.
+    fn agents_mut(&mut self) -> &mut StateSet<Agent, S>;
 
     /// Checks if the given address is an agent.
     ///
     /// # Arguments
     ///
-    /// * `address` - The address to check.
-    pub fn is_agent(&self, address: &Address) -> bool {
-        self.agents.contains(address)
-    }
+    /// * `agent` - An address to check.
+    ///
+    /// # Returns
+    ///
+    /// A boolean indicating whether the address is an agent.
+    fn is_agent(&self, agent: &Agent) -> bool { self.agents().contains(agent) }
 
-    /// Returns a vector of all agent addresses.
-    pub fn get_agents(&self) -> Vec<Address> {
-        self.agents.iter().map(|a| *a).collect()
-    }
-
-    /// Adds an agent to the state.
+    /// Adds the given address to the set of agents.
     ///
     /// # Arguments
     ///
-    /// * `address` - The address of the agent to add.
-    pub fn add_agent(&mut self, address: Address) {
-        self.agents.insert(address);
-    }
+    /// * `agent` - An address to add.
+    ///
+    /// # Returns
+    ///
+    /// A boolean indicating whether the address was added successfully.
+    fn add_agent(&mut self, agent: Agent) -> bool { self.agents_mut().insert(agent) }
 
-    /// Removes an agent from the state.
+    /// Removes the given address from the set of agents.
     ///
     /// # Arguments
     ///
-    /// * `address` - The address of the agent to remove.
-    pub fn remove_agent(&mut self, address: &Address) {
-        self.agents.remove(address);
-    }
-}
+    /// * `agent` - An address to remove.
+    ///
+    /// # Returns
+    ///
+    /// A boolean indicating whether the address was removed successfully.
+    fn remove_agent(&mut self, agent: &Agent) -> bool { self.agents_mut().remove(agent) }
 
-/// Trait for types that have an AgentsState.
-pub trait HasAgentsState<S> {
-    /// Returns a reference to the AgentsState.
-    fn agent_state(&self) -> &AgentsState<S>;
-
-    /// Returns a mutable reference to the AgentsState.
-    fn agent_state_mut(&mut self) -> &mut AgentsState<S>;
+    /// Returns a list of all agents.
+    ///
+    /// # Returns
+    ///
+    /// A vector containing all agents.
+    fn list_agents(&self) -> Vec<Agent> { self.agents().iter().map(|a| *a).collect() }
 }

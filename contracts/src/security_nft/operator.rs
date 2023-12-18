@@ -1,7 +1,7 @@
 use concordium_cis2::*;
 use concordium_std::*;
 
-use crate::utils::holders_state::HasHoldersState;
+use crate::utils::holders_state::IHoldersState;
 
 use super::{event::Event, state::State, types::ContractResult};
 
@@ -9,7 +9,8 @@ use super::{event::Event, state::State, types::ContractResult};
 ///
 /// # Returns
 ///
-/// Returns `ContractResult<()>` indicating whether the operation was successful.
+/// Returns `ContractResult<()>` indicating whether the operation was
+/// successful.
 ///
 /// # Errors
 ///
@@ -31,7 +32,6 @@ pub fn update_operator(
         0: updates,
     }: UpdateOperatorParams = ctx.parameter_cursor().get()?;
     let (state, state_builder) = host.state_and_builder();
-    let state = state.holders_state_mut();
     let sender = ctx.sender();
 
     for UpdateOperator {
@@ -58,7 +58,8 @@ pub fn update_operator(
 ///
 /// # Returns
 ///
-/// Returns `ContractResult<OperatorOfQueryResponse>` containing a boolean indicating whether the given address is an operator for the given owner.
+/// Returns `ContractResult<OperatorOfQueryResponse>` containing a boolean
+/// indicating whether the given address is an operator for the given owner.
 ///
 /// # Errors
 ///
@@ -77,7 +78,7 @@ pub fn operator_of(
     let OperatorOfQueryParams {
         queries,
     }: OperatorOfQueryParams = ctx.parameter_cursor().get()?;
-    let state = host.state().holders_state();
+    let state = host.state();
     let res: Vec<bool> = queries.iter().map(|q| state.is_operator(&q.owner, &q.address)).collect();
 
     Ok(OperatorOfQueryResponse(res))

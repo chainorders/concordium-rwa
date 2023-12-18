@@ -29,9 +29,7 @@ impl TokenState {
     /// # Returns
     ///
     /// Returns a reference to the metadata URL of the token.
-    pub fn metadata_url(&self) -> &MetadataUrl {
-        &self.metadata_url
-    }
+    pub fn metadata_url(&self) -> &MetadataUrl { &self.metadata_url }
 }
 
 #[derive(Serial, DeserialWithState)]
@@ -41,7 +39,7 @@ pub struct TokensState<T, S> {
 }
 
 /// Trait representing a token amount.
-/// 
+///
 /// This trait is used to define the behavior of token amounts.
 pub trait IsTokenAmount:
     concordium_cis2::IsTokenAmount
@@ -49,8 +47,7 @@ pub trait IsTokenAmount:
     + ops::SubAssign
     + Copy
     + ops::AddAssign
-    + ops::Sub<Output = Self>
-{
+    + ops::Sub<Output = Self> {
     /// Returns the zero value of the token amount.
     fn zero() -> Self;
 
@@ -58,7 +55,8 @@ pub trait IsTokenAmount:
     /// This should return `1` for NFTs.
     fn max_value() -> Self;
 
-    /// Subtracts the given amount from self. Returns None if the amount is too large.
+    /// Subtracts the given amount from self. Returns None if the amount is too
+    /// large.
     ///
     /// # Arguments
     ///
@@ -102,17 +100,9 @@ pub enum TokenStateError {
 
 pub type TokenStateResult<T> = Result<T, TokenStateError>;
 
-impl<T: IsTokenId, S: HasStateApi> TokensState<T, S> {
-    /// Creates a new `TokensState` with empty tokens.
-    ///
-    /// # Arguments
-    ///
-    /// * `state_builder` - A mutable reference to the state builder.
-    pub fn new(state_builder: &mut StateBuilder<S>) -> Self {
-        TokensState {
-            tokens: state_builder.new_map(),
-        }
-    }
+pub trait ITokensState<T: IsTokenId, S: HasStateApi> {
+    fn tokens(&self) -> &StateMap<T, TokenState, S>;
+    fn tokens_mut(&mut self) -> &mut StateMap<T, TokenState, S>;
 
     /// Checks if the token with the given ID exists.
     ///
@@ -122,9 +112,10 @@ impl<T: IsTokenId, S: HasStateApi> TokensState<T, S> {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` if the token exists, `Err(TokenStateError::TokenDoesNotExist)` otherwise.
-    pub fn ensure_token_exists(&self, token_id: &T) -> TokenStateResult<()> {
-        self.tokens.get(token_id).ok_or(TokenStateError::TokenDoesNotExist)?;
+    /// Returns `Ok(())` if the token exists,
+    /// `Err(TokenStateError::TokenDoesNotExist)` otherwise.
+    fn ensure_token_exists(&self, token_id: &T) -> TokenStateResult<()> {
+        self.tokens().get(token_id).ok_or(TokenStateError::TokenDoesNotExist)?;
         Ok(())
     }
 
@@ -136,9 +127,10 @@ impl<T: IsTokenId, S: HasStateApi> TokensState<T, S> {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(MetadataUrl)` if the token exists, `Err(TokenStateError::TokenDoesNotExist)` otherwise.
-    pub fn token_metadata_url(&self, token_id: &T) -> TokenStateResult<MetadataUrl> {
-        self.tokens
+    /// Returns `Ok(MetadataUrl)` if the token exists,
+    /// `Err(TokenStateError::TokenDoesNotExist)` otherwise.
+    fn token_metadata_url(&self, token_id: &T) -> TokenStateResult<MetadataUrl> {
+        self.tokens()
             .get(token_id)
             .map(|token| token.metadata_url().to_owned())
             .ok_or(TokenStateError::TokenDoesNotExist)
@@ -153,18 +145,14 @@ impl<T: IsTokenId, S: HasStateApi> TokensState<T, S> {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` if the token was added successfully, `Err(TokenStateError::TokenAlreadyExists)` if the token already exists.
-    pub fn add_token(&mut self, token_id: T, metadata_url: MetadataUrl) -> TokenStateResult<()> {
-        self.tokens
+    /// Returns `Ok(())` if the token was added successfully,
+    /// `Err(TokenStateError::TokenAlreadyExists)` if the token already exists.
+    fn add_token(&mut self, token_id: T, metadata_url: MetadataUrl) -> TokenStateResult<()> {
+        self.tokens_mut()
             .entry(token_id)
             .vacant_or(TokenStateError::TokenAlreadyExists)?
             .insert(TokenState::new(metadata_url));
 
         Ok(())
     }
-}
-
-pub trait HasTokensState<T, A, S> {
-    fn tokens_state(&self) -> &TokensState<T, S>;
-    fn tokens_state_mut(&mut self) -> &mut TokensState<T, S>;
 }

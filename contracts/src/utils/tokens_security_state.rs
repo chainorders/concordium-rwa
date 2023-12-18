@@ -1,12 +1,17 @@
 use concordium_cis2::IsTokenId;
 use concordium_std::*;
 
+use super::tokens_state::ITokensState;
+
+/// The `TokenSecurityState` struct represents the security state of a token.
 #[derive(Serial, Deserial)]
 pub struct TokenSecurityState {
     is_paused: bool,
 }
 
 impl TokenSecurityState {
+    /// Creates a new instance of `TokenSecurityState` with the `is_paused`
+    /// field set to `false`.
     pub fn new() -> Self {
         Self {
             is_paused: false,
@@ -14,33 +19,19 @@ impl TokenSecurityState {
     }
 }
 
-/// `TokensSecurityState` is a struct that holds the security state of tokens.
-///
-/// # Type Parameters
-///
-/// * `T` - The type of the token ID. Must implement `IsTokenId`.
-/// * `S` - The type of the state API. Must implement `HasStateApi`.
-///
-/// # Fields
-///
-/// * `tokens_state` - A `StateMap` that maps token IDs to their respective `TokenSecurityState`.
-#[derive(Serial, DeserialWithState)]
-#[concordium(state_parameter = "S")]
-pub struct TokensSecurityState<T, S> {
-    tokens_state: StateMap<T, TokenSecurityState, S>,
+pub enum TokenSecurityError {
+    /// The token is paused.
+    PausedToken,
 }
 
-impl<T: IsTokenId, S: HasStateApi> TokensSecurityState<T, S> {
-    /// Creates a new `TokensSecurityState` with empty tokens state.
-    ///
-    /// # Arguments
-    ///
-    /// * `state_builder` - A mutable reference to the state builder.
-    pub fn new(state_builder: &mut StateBuilder<S>) -> Self {
-        Self {
-            tokens_state: state_builder.new_map(),
-        }
-    }
+/// The `ITokensSecurityState` trait defines the interface for managing the
+/// security state of tokens.
+pub trait ITokensSecurityState<T: IsTokenId, S: HasStateApi>: ITokensState<T, S> {
+    /// Returns a reference to the map of security states for tokens.
+    fn security_tokens(&self) -> &StateMap<T, TokenSecurityState, S>;
+
+    /// Returns a mutable reference to the map of security states for tokens.
+    fn security_tokens_mut(&mut self) -> &mut StateMap<T, TokenSecurityState, S>;
 
     /// Checks if the token with the given ID is paused.
     ///
@@ -50,9 +41,24 @@ impl<T: IsTokenId, S: HasStateApi> TokensSecurityState<T, S> {
     ///
     /// # Returns
     ///
-    /// Returns `true` if the token is paused, `false` otherwise. If the token does not exist, returns `false`.
-    pub fn is_paused(&self, token_id: &T) -> bool {
-        self.tokens_state.get(token_id).map(|token| token.is_paused).unwrap_or(false)
+    /// Returns `true` if the token is paused, `false` otherwise. If the token
+    /// does not exist, returns `false`.
+    fn is_paused(&self, token_id: &T) -> bool {
+        self.security_tokens().get(token_id).map(|token| token.is_paused).unwrap_or(false)
+    }
+
+    /// Ensures that the given token is not paused.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `TokenSecurityError::TokenPaused` error if the token is
+    /// paused.
+    fn ensure_not_paused(&self, token_id: &T) -> Result<(), TokenSecurityError> {
+        if self.is_paused(token_id) {
+            Err(TokenSecurityError::PausedToken)
+        } else {
+            Ok(())
+        }
     }
 
     /// Pauses the token with the given ID.
@@ -62,8 +68,8 @@ impl<T: IsTokenId, S: HasStateApi> TokensSecurityState<T, S> {
     /// * `token_id` - The ID of the token to pause.
     ///
     /// If the token does not exist, it is created and then paused.
-    pub fn pause(&mut self, token_id: T) {
-        self.tokens_state
+    fn pause(&mut self, token_id: T) {
+        self.security_tokens_mut()
             .entry(token_id)
             .or_insert_with(|| TokenSecurityState::new())
             .modify(|token| token.is_paused = true)
@@ -76,12 +82,7 @@ impl<T: IsTokenId, S: HasStateApi> TokensSecurityState<T, S> {
     /// * `token_id` - The ID of the token to unpause.
     ///
     /// If the token does not exist, nothing happens.
-    pub fn un_pause(&mut self, token_id: T) {
-        self.tokens_state.entry(token_id).and_modify(|token| token.is_paused = false);
+    fn un_pause(&mut self, token_id: T) {
+        self.security_tokens_mut().entry(token_id).and_modify(|token| token.is_paused = false);
     }
-}
-
-pub trait HasTokensSecurityState<T, S> {
-    fn tokens_security_state(&self) -> &TokensSecurityState<T, S>;
-    fn tokens_security_state_mut(&mut self) -> &mut TokensSecurityState<T, S>;
 }

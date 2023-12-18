@@ -2,8 +2,8 @@ use concordium_cis2::IsTokenId;
 use concordium_std::*;
 
 use crate::utils::{
-    agents_state::HasAgentsState, tokens_security_state::HasTokensSecurityState,
-    tokens_state::HasTokensState,
+    agents_state::IsAgentsState, tokens_security_state::ITokensSecurityState,
+    tokens_state::ITokensState,
 };
 
 use super::{error::*, event::*, state::State, types::*};
@@ -22,7 +22,8 @@ pub struct IsPausedResponse {
 ///
 /// # Returns
 ///
-/// Returns `ContractResult<()>` indicating whether the operation was successful.
+/// Returns `ContractResult<()>` indicating whether the operation was
+/// successful.
 ///
 /// # Errors
 ///
@@ -43,14 +44,14 @@ pub fn pause(
     logger: &mut Logger,
 ) -> ContractResult<()> {
     let state = host.state_mut();
-    ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
+    ensure!(state.is_agent(&ctx.sender()), Error::Unauthorized);
 
     let PauseParams {
         tokens,
     }: PauseParams<TokenId> = ctx.parameter_cursor().get()?;
     for token_id in tokens {
-        state.tokens_state().ensure_token_exists(&token_id)?;
-        state.tokens_security_state_mut().pause(token_id);
+        state.ensure_token_exists(&token_id)?;
+        state.pause(token_id);
         logger.log(&Event::Paused(Paused {
             token_id,
         }))?;
@@ -63,7 +64,8 @@ pub fn pause(
 ///
 /// # Returns
 ///
-/// Returns `ContractResult<()>` indicating whether the operation was successful.
+/// Returns `ContractResult<()>` indicating whether the operation was
+/// successful.
 ///
 /// # Errors
 ///
@@ -84,14 +86,14 @@ pub fn un_pause(
     logger: &mut Logger,
 ) -> ContractResult<()> {
     let state = host.state_mut();
-    ensure!(state.agent_state().is_agent(&ctx.sender()), Error::Unauthorized);
+    ensure!(state.is_agent(&ctx.sender()), Error::Unauthorized);
 
     let PauseParams {
         tokens,
     }: PauseParams<TokenId> = ctx.parameter_cursor().get()?;
     for token_id in tokens {
-        state.tokens_state().ensure_token_exists(&token_id)?;
-        state.tokens_security_state_mut().un_pause(token_id);
+        state.ensure_token_exists(&token_id)?;
+        state.un_pause(token_id);
         logger.log(&Event::UnPaused(Paused {
             token_id,
         }))?;
@@ -104,7 +106,8 @@ pub fn un_pause(
 ///
 /// # Returns
 ///
-/// Returns `ContractResult<IsPausedResponse>` containing a boolean for each token indicating whether it is paused.
+/// Returns `ContractResult<IsPausedResponse>` containing a boolean for each
+/// token indicating whether it is paused.
 ///
 /// # Errors
 ///
@@ -127,8 +130,8 @@ pub fn is_paused(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<IsP
 
     let state = host.state();
     for token_id in tokens {
-        state.tokens_state().ensure_token_exists(&token_id)?;
-        res.tokens.push(state.tokens_security_state().is_paused(&token_id))
+        state.ensure_token_exists(&token_id)?;
+        res.tokens.push(state.is_paused(&token_id))
     }
 
     Ok(res)

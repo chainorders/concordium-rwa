@@ -1,5 +1,6 @@
 pub mod agent;
 pub mod balance_of;
+pub mod burn;
 pub mod error;
 pub mod event;
 pub mod freeze;
@@ -7,10 +8,9 @@ pub mod init;
 pub mod mint;
 pub mod operator;
 pub mod pause;
+pub mod recovery;
 mod state;
 pub mod supports;
 pub mod token_metadata;
 pub mod transfer;
 pub mod types;
-pub mod burn;
-pub mod recovery;

@@ -2,79 +2,54 @@ use concordium_cis2::Cis2Error;
 use concordium_std::*;
 
 use crate::utils::{
-    compliance_client::ComplianceError, holders_state::HolderStateError,
-    identity_registry_client::IdentityRegistryError, tokens_state::TokenStateError,
+    cis2_state::Cis2StateError, clients::contract_client::ContractClientError,
+    holders_security_state::RecoveryError, holders_state::HolderStateError,
+    tokens_security_state::TokenSecurityError, tokens_state::TokenStateError,
 };
 
 pub type Error = Cis2Error<CustomContractError>;
 
+/// Represents the different types of errors that can occur in the contract.
 #[derive(Serialize, SchemaType, Reject, Debug)]
 pub enum CustomContractError {
-    /// Error occurred while parsing.
+    /// Triggered when there is an error parsing a value.
     ParseError,
-
-    /// Error occurred while logging.
+    /// Triggered when there is an error logging a value.
     LogError,
-
-    /// Error occurred while calling the Identity Registry Contract.
-    IdentityRegistryError,
-
-    /// The receiver of the token is not verified.
+    /// Triggered when the receiver of the token is not verified.
     UnVerifiedIdentity,
-
-    /// The transfer is non-compliant.
+    /// Triggered when the transfer is non-compliant.
     InCompliantTransfer,
-
-    /// Error occurred while calling the Compliance Contract.
+    /// Triggered when there is an error calling the Compliance Contract.
     ComplianceError,
-
-    /// Error occurred while invoking a contract.
+    /// Triggered when there is an error invoking a contract.
     CallContractError,
-
-    /// The token is paused.
+    /// Triggered when the token is paused.
     PausedToken,
-
-    /// The amount for NFT is not 1.
+    /// Triggered when the amount for NFT is not 1.
     InvalidAmount,
-
-    /// The provided address is invalid.
+    /// Triggered when the provided address is invalid.
     InvalidAddress,
+    /// Triggered when an agent already exists.
+    AgentAlreadyExists,
+    /// Triggered when an agent could not be found.
+    AgentNotFound,
 }
 
 impl From<CustomContractError> for Error {
-    fn from(value: CustomContractError) -> Self {
-        Error::Custom(value)
-    }
-}
-
-impl From<IdentityRegistryError> for Error {
-    fn from(_: IdentityRegistryError) -> Self {
-        Error::Custom(CustomContractError::IdentityRegistryError)
-    }
-}
-
-impl From<ComplianceError> for Error {
-    fn from(_: ComplianceError) -> Self {
-        Error::Custom(CustomContractError::ComplianceError)
-    }
+    fn from(value: CustomContractError) -> Self { Error::Custom(value) }
 }
 
 impl<T> From<CallContractError<T>> for CustomContractError {
-    fn from(_: CallContractError<T>) -> Self {
-        CustomContractError::CallContractError
-    }
+    fn from(_: CallContractError<T>) -> Self { CustomContractError::CallContractError }
 }
 
 impl From<ParseError> for CustomContractError {
-    fn from(_: ParseError) -> Self {
-        CustomContractError::ParseError
-    }
+    fn from(_: ParseError) -> Self { CustomContractError::ParseError }
 }
 
 impl From<LogError> for CustomContractError {
-    fn from(_: LogError) -> Self {
-        CustomContractError::LogError
-    }
+    fn from(_: LogError) -> Self { CustomContractError::LogError }
 }
 
 impl From<super::state::StateError> for Error {
@@ -90,13 +65,46 @@ impl From<super::state::StateError> for Error {
 }
 
 impl From<HolderStateError> for Error {
-    fn from(_: HolderStateError) -> Self {
-        Error::InsufficientFunds
-    }
+    fn from(_: HolderStateError) -> Self { Error::InsufficientFunds }
 }
 
 impl From<TokenStateError> for Error {
-    fn from(_: TokenStateError) -> Self {
-        Error::InvalidTokenId
+    fn from(_: TokenStateError) -> Self { Error::InvalidTokenId }
+}
+
+impl From<RecoveryError> for Error {
+    fn from(value: RecoveryError) -> Self {
+        match value {
+            RecoveryError::AddressAlreadyRecovered => {
+                Error::Custom(CustomContractError::InvalidAddress)
+            }
+            RecoveryError::InvalidRecoveryAddress => {
+                Error::Custom(CustomContractError::InvalidAddress)
+            }
+        }
+    }
+}
+
+impl From<Cis2StateError> for Error {
+    fn from(value: Cis2StateError) -> Self {
+        match value {
+            Cis2StateError::InvalidTokenId => Error::InvalidTokenId,
+            Cis2StateError::InsufficientFunds => Error::InsufficientFunds,
+            Cis2StateError::InvalidAmount => Error::Custom(CustomContractError::InvalidAmount),
+        }
+    }
+}
+
+impl From<TokenSecurityError> for Error {
+    fn from(value: TokenSecurityError) -> Self {
+        match value {
+            TokenSecurityError::PausedToken => Error::Custom(CustomContractError::PausedToken),
+        }
+    }
+}
+
+impl<E> From<ContractClientError<E>> for Error {
+    fn from(_: ContractClientError<E>) -> Self {
+        Error::Custom(CustomContractError::CallContractError)
     }
 }

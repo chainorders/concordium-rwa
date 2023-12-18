@@ -1,7 +1,7 @@
 use concordium_cis2::{TokenAmountU8, TokenIdU8};
 use concordium_std::*;
 
-use crate::utils::tokens_state::IsTokenAmount;
+use crate::utils::{tokens_state::IsTokenAmount, holders_state::IsTokenId};
 
 use super::error::Error;
 
@@ -46,3 +46,5 @@ impl IsTokenAmount for TokenAmount {
         TokenAmountU8(1)
     }
 }
+
+impl IsTokenId for TokenId {}
