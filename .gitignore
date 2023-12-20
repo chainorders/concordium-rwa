@@ -2,7 +2,7 @@
 !.vscode/extensions.json
 node_modules
 /target
-concordium-rwa/**/contract.wasm.v1
-concordium-rwa/**/schema.bin
+contracts/**/contract.wasm.v1
+contracts/**/schema.bin
 .yarn
 .pnp.cjs
