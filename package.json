@@ -8,7 +8,8 @@
 		"contracts/compliance",
 		"contracts/sponsor",
 		"contracts/identity-registry",
-		"contracts/security-nft"
+		"contracts/security-nft",
+		"frontend"
 	],
 	"scripts": {
 		"build:contracts": "yarn && yarn workspaces foreach -Ap --include 'contracts/*' run build",
