@@ -1,5 +1,8 @@
 .vscode
 !.vscode/extensions.json
 node_modules
-backend/generated
 /target
+concordium-rwa/**/contract.wasm.v1
+concordium-rwa/**/schema.bin
+.yarn
+.pnp.cjs

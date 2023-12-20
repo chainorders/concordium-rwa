@@ -1,15 +1,22 @@
 {
 	"name": "concordium-rwa",
 	"version": "1.0.0",
-	"main": "index.js",
 	"repository": "git@github.com:chainorders/concordium-rwa.git",
 	"author": "Parv Sharma <parv0888@gmail.com>",
-	"license": "MIT",
 	"private": true,
 	"workspaces": [
-		"contracts"
+		"contracts/compliance",
+		"contracts/sponsor",
+		"contracts/identity-registry",
+		"contracts/security-nft"
 	],
 	"scripts": {
-		"build:contracts": "yarn workspace contracts run build"
+		"build:contracts": "yarn && yarn workspaces foreach -Ap --include 'contracts/*' run build",
+		"deploy:contracts": "yarn workspaces foreach -A --include 'contracts/*' run deploy",
+		"format:contracts": "yarn workspaces foreach -Ap --include 'contracts/*' run format"
+	},
+	"packageManager": "yarn@4.0.2",
+	"devDependencies": {
+		"cross-env": "^7.0.3"
 	}
 }
