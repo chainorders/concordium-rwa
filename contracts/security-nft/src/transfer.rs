@@ -89,9 +89,7 @@ pub fn transfer(
             // Sender is the Owner of the token
             from.eq(&sender)
             // Sender is an operator of the owner
-            || state.is_operator(&from, &sender)
-            // Sender is the sponsor (CIS3) of the transaction 
-            || state.is_sponsor(&sender);
+            || state.is_operator(&from, &sender);
 
         ensure!(is_authorized, Error::Unauthorized);
 
