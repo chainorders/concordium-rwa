@@ -3,7 +3,7 @@ use concordium_std::*;
 
 use concordium_rwa_utils::holders_state::IHoldersState;
 
-use super::{event::Event, state::State, types::ContractResult};
+use super::{error::Error, event::Event, state::State, types::ContractResult};
 
 /// Updates the operator status for the sender.
 ///
@@ -33,6 +33,7 @@ pub fn update_operator(
     }: UpdateOperatorParams = ctx.parameter_cursor().get()?;
     let (state, state_builder) = host.state_and_builder();
     let sender = ctx.sender();
+    ensure!(sender.is_account(), Error::InvalidAddress);
 
     for UpdateOperator {
         operator,

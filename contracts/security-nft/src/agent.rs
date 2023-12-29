@@ -12,6 +12,7 @@ use super::{error::*, event::*, state::State, types::*};
     contract = "rwa_security_nft",
     name = "isAgent",
     parameter = "Address",
+    return_value = "bool",
     error = "super::error::Error"
 )]
 pub fn is_agent(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<bool> {

@@ -11,13 +11,13 @@ use concordium_rwa_utils::{
     },
     holders_security_state::IHoldersSecurityState,
     holders_state::IHoldersState,
-    sponsors_state::ISponsorsState,
     tokens_security_state::ITokensSecurityState,
     tokens_state::ITokensState,
 };
 
 use super::{error::*, event::*, state::State, types::*};
 
+pub type ContractTransferParams = TransferParams<TokenId, TokenAmount>;
 /// Compliant Transfers ownership of an NFT from one verified account to another
 /// verified account. This function can be called by the owner of the token or
 /// an operator of the owner or the trusted sponsor of the transaction.
@@ -47,7 +47,7 @@ use super::{error::*, event::*, state::State, types::*};
     name = "transfer",
     enable_logger,
     mutable,
-    parameter = "TransferParams<TokenId, TokenAmount>",
+    parameter = "ContractTransferParams",
     error = "super::error::Error"
 )]
 pub fn transfer(
@@ -56,8 +56,7 @@ pub fn transfer(
     logger: &mut Logger,
 ) -> ContractResult<()> {
     let sender = ctx.sender();
-    let TransferParams(transfers): TransferParams<TokenId, TokenAmount> =
-        ctx.parameter_cursor().get()?;
+    let TransferParams(transfers): ContractTransferParams = ctx.parameter_cursor().get()?;
 
     let state = host.state();
     let compliance = ComplianceContract(state.compliance());
@@ -85,13 +84,7 @@ pub fn transfer(
             Error::InCompliantTransfer
         );
 
-        let is_authorized =
-            // Sender is the Owner of the token
-            from.eq(&sender)
-            // Sender is an operator of the owner
-            || state.is_operator(&from, &sender);
-
-        ensure!(is_authorized, Error::Unauthorized);
+        ensure!(from.eq(&sender) || state.is_operator(&from, &sender), Error::Unauthorized);
 
         let (state, state_builder) = host.state_and_builder();
         state.transfer(from, to.address(), token_id, amount, state_builder)?;
@@ -202,6 +195,15 @@ pub fn forced_transfer(
             from,
             to: to.address(),
         })))?;
+
+        if let Address::Contract(from_contract) = from {
+            //TODO: there should be a way to notify that the transfer has been
+            // forced Ex. A token is sent to the marketplace for
+            // selling. Upon a forced transfer since marketplace
+            // would not know that the it does not have the token authority
+            // would continue to sell the token. Without anyone being able to
+            // buy it.
+        }
 
         if let Receiver::Contract(to_contract, entrypoint) = to {
             let parameter = OnReceivingCis2Params {

@@ -37,7 +37,7 @@ pub trait IsAgentsState<S: HasStateApi> {
     ///
     /// # Returns
     ///
-    /// A boolean indicating whether the address was added successfully.
+    /// If the agent did not exist, returns `true`. Otherwise, returns `false`.
     fn add_agent(&mut self, agent: Agent) -> bool { self.agents_mut().insert(agent) }
 
     /// Removes the given address from the set of agents.
@@ -48,7 +48,7 @@ pub trait IsAgentsState<S: HasStateApi> {
     ///
     /// # Returns
     ///
-    /// A boolean indicating whether the address was removed successfully.
+    /// Removes a value from the set. Returns whether the value was present in the set.
     fn remove_agent(&mut self, agent: &Agent) -> bool { self.agents_mut().remove(agent) }
 
     /// Returns a list of all agents.

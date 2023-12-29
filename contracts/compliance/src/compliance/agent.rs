@@ -11,6 +11,7 @@ use super::{error::*, event::*, state::State, types::*};
 #[receive(
     contract = "rwa_compliance",
     name = "isAgent",
+    return_value = "bool",
     parameter = "Address",
     error = "super::error::Error"
 )]

@@ -31,11 +31,11 @@ pub fn is_verified(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<b
     let address: Address = ctx.parameter_cursor().get()?;
 
     // Check that the identity exists.
-    let identity = host.state.identities.get(&address).ok_or(Error::IdentityNotFound)?;
-    let issuers = host.state.issuers.iter().map(|i| *i);
+    let identity = host.state().identities.get(&address).ok_or(Error::IdentityNotFound)?;
+    let issuers = host.state().issuers.iter().map(|i| *i);
     for issuer in issuers {
-        let credential_holder_id = identity.key(&issuer);
-        let credential_status = match credential_holder_id {
+        let credential_id = identity.credential_id(&issuer);
+        let credential_status = match credential_id {
             Some(credential_holder_id) => {
                 Cis4ContractAddress(issuer).credential_status(host, credential_holder_id)?
             }

@@ -3,15 +3,24 @@ use concordium_std::*;
 use concordium_rwa_utils::{agents_state::IsAgentsState, clients::contract_client::IContractState};
 
 use super::types::{AttributeTag, AttributeValue, Identity, Issuer};
+pub type CredentialId = PublicKeyEd25519;
 
 #[derive(Serial, DeserialWithState, Deletable)]
 #[concordium(state_parameter = "S")]
+/// Represents the state of an identity in the identity registry.
 pub struct IdentityState<S> {
     attributes:  StateMap<AttributeTag, AttributeValue, S>,
-    credentials: StateMap<Issuer, PublicKeyEd25519, S>,
+    credentials: StateMap<Issuer, CredentialId, S>,
 }
 
+/// Implementation of the `IdentityState` struct.
 impl<S: HasStateApi> IdentityState<S> {
+    /// Converts the `IdentityState` into an `Identity` struct.
+    ///
+    /// # Returns
+    ///
+    /// An `Identity` struct containing the attributes and credentials of the
+    /// `IdentityState`.
     pub fn to_identity(&self) -> Identity {
         Identity {
             attributes:  self.attributes.iter().map(|i| (*i.0, *i.1)).collect(),
@@ -19,11 +28,27 @@ impl<S: HasStateApi> IdentityState<S> {
         }
     }
 
-    pub fn credentials(&self) -> Vec<(Issuer, PublicKeyEd25519)> {
+    /// Retrieves the list of credentials stored in the `IdentityState`.
+    ///
+    /// # Returns
+    ///
+    /// A vector of tuples, where each tuple contains an `Issuer` and a
+    /// `CredentialId`.
+    pub fn credentials(&self) -> Vec<(Issuer, CredentialId)> {
         self.credentials.iter().map(|i| (*i.0, *i.1)).collect()
     }
 
-    pub fn key(&self, issuer: &Issuer) -> Option<PublicKeyEd25519> {
+    /// Retrieves the `CredentialId` associated with the specified `Issuer`.
+    ///
+    /// # Arguments
+    ///
+    /// * `issuer` - The `Issuer` for which to retrieve the `CredentialId`.
+    ///
+    /// # Returns
+    ///
+    /// An `Option` containing the `CredentialId` if it exists, or `None` if it
+    /// does not.
+    pub fn credential_id(&self, issuer: &Issuer) -> Option<CredentialId> {
         self.credentials.get(issuer).map(|i| *i)
     }
 }

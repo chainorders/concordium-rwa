@@ -1,4 +1,4 @@
-use concordium_std::*;
+use concordium_std::{*};
 
 use concordium_rwa_utils::agents_state::IsAgentsState;
 
@@ -13,6 +13,7 @@ use super::{error::*, event::*, state::State, types::*};
     contract = "rwa_identity_registry",
     name = "isAgent",
     parameter = "Address",
+    return_value = "bool",
     error = "super::error::Error"
 )]
 pub fn is_agent(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<bool> {
