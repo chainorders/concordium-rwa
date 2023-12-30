@@ -4,7 +4,7 @@ use super::error::Error;
 
 pub type ContractResult<T> = Result<T, Error>;
 pub type AttributeTag = u8;
-pub type AttributeValue = [u8; 32];
+pub type AttributeValue = Vec<u8>;
 
 #[derive(Serialize, SchemaType)]
 pub struct Identity {

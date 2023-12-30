@@ -119,7 +119,7 @@ pub fn delete_identities(
         let state = host.state_mut();
 
         ensure!(
-            state.identities.remove_and_get(&address).map(|i| i.delete()).is_none(),
+            state.identities.remove_and_get(&address).map(|i| i.delete()).is_some(),
             Error::IdentityNotFound
         );
 

@@ -1,0 +1,14 @@
+[package]
+name = "contracts-ts-generator"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+concordium-rwa-identity-registry = { path = "../contracts/identity-registry" }
+concordium-rwa-security-nft = { path = "../contracts/security-nft" }
+concordium-std = { workspace = true, default-features = false }
+prettyplease = "0.2.15"
+quote = "1.0"
+syn = { version = "2.0"}
+proc-macro2 = "1.0"
+ts_quote = "0.2.1"

@@ -4,7 +4,7 @@ use concordium_rwa_utils::clients::cis4_client::{
     Cis4Client, Cis4ContractAddress, CredentialStatus,
 };
 
-use super::{error::Error, state::State, types::ContractResult};
+use super::{state::State, types::ContractResult};
 
 /// Handles the `isVerified` contract call in the `rwa_identity_registry`
 /// contract.
@@ -31,7 +31,12 @@ pub fn is_verified(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<b
     let address: Address = ctx.parameter_cursor().get()?;
 
     // Check that the identity exists.
-    let identity = host.state().identities.get(&address).ok_or(Error::IdentityNotFound)?;
+    let identity = host.state().identities.get(&address);
+    let identity = match identity {
+        Some(identity) => identity,
+        None => return Ok(false),
+    };
+
     let issuers = host.state().issuers.iter().map(|i| *i);
     for issuer in issuers {
         let credential_id = identity.credential_id(&issuer);

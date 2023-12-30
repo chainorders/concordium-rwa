@@ -23,7 +23,7 @@ impl<S: HasStateApi> IdentityState<S> {
     /// `IdentityState`.
     pub fn to_identity(&self) -> Identity {
         Identity {
-            attributes:  self.attributes.iter().map(|i| (*i.0, *i.1)).collect(),
+            attributes:  self.attributes.iter().map(|i| (*i.0, i.1.to_owned())).collect(),
             credentials: self.credentials.iter().map(|i| (*i.0, *i.1)).collect(),
         }
     }
