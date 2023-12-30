@@ -19,6 +19,7 @@ import GetIdentity from "./components/contracts/IdentityRegistry/GetIdentity";
 import IsVerified from "./components/contracts/IdentityRegistry/IsVerified";
 import DeleteIdentity from "./components/contracts/IdentityRegistry/DeleteIdentities";
 import { addAgent as identityRegistryAddAgent } from "./lib/IdentityRegistryContract";
+import ErrorDisplay from "./components/common/ErrorDisplay";
 
 // Header component
 function Header() {
@@ -107,6 +108,7 @@ function Layout() {
 										<Route path="isVerified" element={<IsVerified />} />
 										<Route path="deleteIdentities" element={<DeleteIdentity />} />
 										<Route path="" element={<Navigate to="identities" />} />
+										<Route path="*" element={<ErrorDisplay text="Not Implemented: Work In Progress" />} />
 									</Route>
 								</Route>
 							</Route>
