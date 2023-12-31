@@ -1,9 +1,9 @@
 use concordium_std::*;
 
-use concordium_rwa_utils::clients::compliance_client::{
-    contract_types::CanTransferParam, ComplianceContract, IComplianceClient,
+use concordium_rwa_utils::{
+    clients::compliance_client::{ComplianceContract, IComplianceClient},
+    compliance_types::*,
 };
-
 use super::{state::State, types::*};
 
 /// Handles the `can_transfer` event in the `rwa_compliance` contract.

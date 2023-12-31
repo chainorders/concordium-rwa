@@ -9,3 +9,5 @@ pub mod sponsors_state;
 pub mod tokens_security_state;
 pub mod tokens_state;
 pub mod cis2_types;
+pub mod common_types;
+pub mod compliance_types;

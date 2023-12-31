@@ -1,9 +1,9 @@
 use concordium_std::*;
 
-use concordium_rwa_utils::clients::compliance_client::{
-    contract_types::TransferredParam, ComplianceContract, IComplianceClient,
+use concordium_rwa_utils::{
+    clients::compliance_client::{ComplianceContract, IComplianceClient},
+    compliance_types::*,
 };
-
 use super::{error::Error, state::State, types::*};
 
 /// Handles the `transferred` event in the `rwa_compliance` contract.

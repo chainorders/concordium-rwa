@@ -1,9 +1,7 @@
 use concordium_cis2::StandardIdentifier;
 use concordium_std::{Address, ContractAddress, EntrypointName, Host};
 
-use crate::{holders_state::IsTokenId, tokens_state::IsTokenAmount};
-
-use self::contract_types::{BurnedParam, CanTransferParam, MintedParam, Token, TransferredParam};
+use crate::{compliance_types::*, holders_state::IsTokenId, tokens_state::IsTokenAmount};
 
 use super::contract_client::{ContractClientError, IContractClient, IContractState};
 
@@ -21,75 +19,6 @@ pub const COMPLIANCE_STANDARD_IDENTIFIER: StandardIdentifier =
 pub struct ComplianceContract(pub ContractAddress);
 
 pub type ComplianceError = ContractClientError<()>;
-
-pub mod contract_types {
-    use concordium_std::{Address, ContractAddress, SchemaType, Serialize};
-
-    use crate::{tokens_state::IsTokenAmount, holders_state::IsTokenId};
-
-    #[derive(Serialize, SchemaType, Copy, Clone)]
-    pub struct Token<T: IsTokenId> {
-        pub token_id: T,
-        pub contract: ContractAddress,
-    }
-
-    impl<T: IsTokenId> Token<T> {
-        pub fn new(token_id: T, contract: ContractAddress) -> Self {
-            Self {
-                token_id,
-                contract,
-            }
-        }
-    }
-
-    /// Parameters for the `can_transfer` function.
-    #[derive(Serialize, SchemaType)]
-    pub struct CanTransferParam<T: IsTokenId, A: IsTokenAmount> {
-        /// The ID of the token to transfer.
-        pub token_id: Token<T>,
-        /// The address to transfer from.
-        pub from:     Address,
-        /// The address to transfer to.
-        pub to:       Address,
-        /// The amount of tokens to transfer.
-        pub amount:   A,
-    }
-
-    /// Parameters for the `burned` function.
-    #[derive(Serialize, SchemaType)]
-    pub struct BurnedParam<T: IsTokenId, A: IsTokenAmount> {
-        /// The ID of the token that was burned.
-        pub token_id: Token<T>,
-        /// The address of the owner of the burned tokens.
-        pub owner:    Address,
-        /// The amount of tokens that were burned.
-        pub amount:   A,
-    }
-
-    /// Parameters for the `minted` function.
-    #[derive(Serialize, SchemaType)]
-    pub struct MintedParam<T: IsTokenId, A: IsTokenAmount> {
-        /// The ID of the token that was minted.
-        pub token_id: Token<T>,
-        /// The address of the owner of the minted tokens.
-        pub owner:    Address,
-        /// The amount of tokens that were minted.
-        pub amount:   A,
-    }
-
-    /// Parameters for the `transferred` function.
-    #[derive(Serialize, SchemaType)]
-    pub struct TransferredParam<T: IsTokenId, A: IsTokenAmount> {
-        /// The ID of the token that was transferred.
-        pub token_id: Token<T>,
-        /// The address of the sender of the transfer.
-        pub from:     Address,
-        /// The address of the receiver of the transfer.
-        pub to:       Address,
-        /// The amount of tokens that were transferred.
-        pub amount:   A,
-    }
-}
 
 /// A client for the compliance contract.
 /// The compliance contract is used to check if a transfer can be made.

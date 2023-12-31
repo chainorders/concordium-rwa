@@ -2,7 +2,8 @@ use concordium_cis2::{BurnEvent, Cis2Event, IsTokenId};
 use concordium_std::*;
 
 use concordium_rwa_utils::{
-    clients::compliance_client::{contract_types::Token, ComplianceContract, IComplianceClient},
+    clients::compliance_client::{ComplianceContract, IComplianceClient},
+    compliance_types::Token,
     holders_security_state::IHoldersSecurityState,
     holders_state::IHoldersState,
     sponsors_state::ISponsorsState,

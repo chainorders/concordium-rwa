@@ -8,9 +8,10 @@ use concordium_rwa_utils::{
     agents_state::IsAgentsState,
     cis2_state::ICis2State,
     clients::{
-        compliance_client::{contract_types::Token, ComplianceContract, IComplianceClient},
+        compliance_client::{ComplianceContract, IComplianceClient},
         identity_registry_client::{IdentityRegistryClient, IdentityRegistryContract},
     },
+    compliance_types::Token,
     holders_security_state::IHoldersSecurityState,
 };
 

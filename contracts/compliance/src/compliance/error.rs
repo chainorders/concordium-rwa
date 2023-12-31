@@ -6,7 +6,7 @@ use concordium_rwa_utils::clients::contract_client::ContractClientError;
 pub enum Error {
     ParseError,
     LogError,
-    InvalidIssuer,
+    InvalidModule,
     CallContractError,
     Unauthorized,
     AgentAlreadyExists,
@@ -20,8 +20,8 @@ impl From<ParseError> for Error {
 impl From<ContractClientError<()>> for Error {
     fn from(e: ContractClientError<()>) -> Self {
         match e {
-            ContractClientError::NoResponse => Error::InvalidIssuer,
-            ContractClientError::InvalidResponse => Error::InvalidIssuer,
+            ContractClientError::NoResponse => Error::InvalidModule,
+            ContractClientError::InvalidResponse => Error::InvalidModule,
             ContractClientError::CallContractError(_) => Error::CallContractError,
             // these should not happen
             ContractClientError::ParseResult => Error::ParseError,

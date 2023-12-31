@@ -1,5 +1,6 @@
-use concordium_rwa_utils::clients::compliance_client::{
-    contract_types::BurnedParam, ComplianceContract, IComplianceClient,
+use concordium_rwa_utils::{
+    clients::compliance_client::{ComplianceContract, IComplianceClient},
+    compliance_types::*,
 };
 use concordium_std::*;
 
