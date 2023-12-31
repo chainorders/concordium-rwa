@@ -42,7 +42,6 @@ pub trait IComplianceClient<T: IsTokenId, A: IsTokenAmount, S: IContractState>:
         &self,
         host: &Host<S>,
         token_id: Token<T>,
-        from: Address,
         to: Address,
         amount: A,
     ) -> Result<bool, ComplianceError> {
@@ -51,7 +50,6 @@ pub trait IComplianceClient<T: IsTokenId, A: IsTokenAmount, S: IContractState>:
             COMPLIANCE_CAN_TRANSFER_ENTRYPOINT,
             &CanTransferParam {
                 token_id,
-                from,
                 to,
                 amount,
             },

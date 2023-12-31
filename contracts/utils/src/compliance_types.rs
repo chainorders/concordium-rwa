@@ -22,8 +22,6 @@ impl<T: IsTokenId> Token<T> {
 pub struct CanTransferParam<T: IsTokenId, A: IsTokenAmount> {
     /// The ID of the token to transfer.
     pub token_id: Token<T>,
-    /// The address to transfer from.
-    pub from:     Address,
     /// The address to transfer to.
     pub to:       Address,
     /// The amount of tokens to transfer.

@@ -1,8 +1,9 @@
 import { AttributeKeyString } from "@concordium/web-sdk";
-import { MenuItem, Select, Stack, TextField } from "@mui/material";
+import { MenuItem, Select, Stack } from "@mui/material";
 import { useEffect, useState } from "react";
 import { IdentityAttribute } from "../../../lib/IdentityRegistryContract";
-import { Buffer } from "buffer/";
+import AttributeValueField from "../../common/AttributeValueField";
+import { AttributeValue } from "../../../lib/common/types";
 
 export interface AttributeFieldProps {
 	value?: IdentityAttribute;
@@ -13,27 +14,30 @@ export interface AttributeFieldProps {
 
 interface State {
 	key?: AttributeKeyString | "";
-	value?: string;
+	value?: AttributeValue;
 }
 export default function AttributeField(props?: AttributeFieldProps) {
 	const [form, setForm] = useState<State>({
 		key: props?.value?.key || "",
-		value: props?.value?.value.toString("utf8") || "",
+		value: props?.value?.value,
 	});
 
 	const updateAttribute = (form: State) => {
 		if (props?.onChange && form.key && form.value) {
-			props.onChange({ key: form.key, value: Buffer.from(form.value, "utf8") });
+			props.onChange({
+				key: form.key,
+				value: form.value,
+			});
 		}
 	};
 
 	const setKey = (key: AttributeKeyString | "") => {
-		const newValue = { ...form, key, value: "" };
+		const newValue = { ...form, key };
 		setForm(newValue);
 		updateAttribute(newValue);
 	};
 
-	const setValue = (value: string) => {
+	const setValue = (value?: AttributeValue) => {
 		const newValue = { ...form, value };
 		setForm(newValue);
 		updateAttribute(newValue);
@@ -42,7 +46,7 @@ export default function AttributeField(props?: AttributeFieldProps) {
 	useEffect(() => {
 		setForm({
 			key: props?.value?.key || "",
-			value: props?.value?.value.toString("utf8") || "",
+			value: props?.value?.value,
 		});
 	}, [props?.value]);
 
@@ -63,14 +67,12 @@ export default function AttributeField(props?: AttributeFieldProps) {
 					Select a Value
 				</MenuItem>
 			</Select>
-			<TextField
-				disabled={props?.disabled || !form.key}
-				InputProps={{ readOnly: props?.readonly }}
+			<AttributeValueField
+				attributeKey={form.key ? form.key : undefined}
+				disabled={props?.disabled}
+				readonly={props?.readonly}
 				value={form.value}
-				onChange={(e) => setValue(e.target.value)}
-				required
-				helperText="Attribute Value"
-				fullWidth
+				onChange={setValue}
 			/>
 		</Stack>
 	);

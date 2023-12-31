@@ -4,11 +4,18 @@ import {
 	ContractAddress,
 	ContractTraceEvent,
 	Energy,
+	HexString,
 	RejectReason,
 } from "@concordium/web-sdk";
 import { AddressSchemaJson, ContractAddressSchemaJson } from "../ts-types";
+import { Buffer } from "buffer/";
 
 export type Agent = Address;
+export type AttributeValue = Buffer;
+export type TokenId = HexString;
+export type TokenAmount = string;
+export type ComplianceModule = ContractAddress.Type;
+
 export const fromAddressJson = (json: AddressSchemaJson): Address => {
 	if ("Account" in json) {
 		return {
@@ -55,6 +62,9 @@ export const fromContractAddressJson = (json: ContractAddressSchemaJson): Contra
 		subindex: BigInt(json.subindex),
 	});
 };
+export const toAttributeValueJson = (attributeValue: AttributeValue) => {
+	return [...attributeValue];
+};
 
 export interface InvokeContractSuccessResult<P> {
 	tag: "success";
@@ -74,3 +84,5 @@ export interface InvokeContractFailedResult<P> {
 	 */
 	returnValue: P;
 }
+
+export type InvokeContractResult<R, E> = InvokeContractSuccessResult<R> | InvokeContractFailedResult<E>;

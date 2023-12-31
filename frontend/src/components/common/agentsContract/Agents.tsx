@@ -1,13 +1,17 @@
 import { Button, Grid, Stack, Typography } from "@mui/material";
 import { useState } from "react";
-import { Agent, fromAddressJson } from "../../../lib/common/types";
+import { Agent, InvokeContractResult } from "../../../lib/common/types";
 import { useParams } from "react-router-dom";
-import { AccountAddress, ContractAddress } from "@concordium/web-sdk";
-import { getAgents } from "../../../lib/IdentityRegistryContract";
+import { AccountAddress, ConcordiumGRPCClient, ContractAddress } from "@concordium/web-sdk";
 import { useNodeClient } from "../../NodeClientProvider";
-import CCDScanContractLink from "../../common/concordium/CCDScanContractLink";
+import CCDScanContractLink from "../concordium/CCDScanContractLink";
 
-export default function Agents() {
+export default function Agents(props: {
+	getAgents: (
+		provider: ConcordiumGRPCClient,
+		contract: ContractAddress.Type
+	) => Promise<InvokeContractResult<Agent[], string>>;
+}) {
 	const { index, subIndex } = useParams();
 	const contract = ContractAddress.create(BigInt(index!), BigInt(subIndex!));
 	const { provider } = useNodeClient();
@@ -16,17 +20,16 @@ export default function Agents() {
 
 	const onClick = async () => {
 		try {
-			const result = await getAgents(provider, contract);
+			const result = await props.getAgents(provider, contract);
 			switch (result.tag) {
 				case "success":
-					setResult(result.returnValue?.map(fromAddressJson));
+					setResult(result.returnValue);
 					break;
 				case "failure":
-					setError("Failed");
+					setError(`Failed: ${result.returnValue}`);
 					break;
 			}
 		} catch (e: unknown) {
-			console.error(e);
 			setError(e instanceof Error ? e.message : "Unknown error");
 		}
 	};

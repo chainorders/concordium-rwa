@@ -101,14 +101,23 @@ pub fn generate_typescript_types(types: &HashMap<String, Type>) -> TokenStream {
 mod tests {
     use std::{collections::HashMap, fs};
 
-    use concordium_rwa_identity_registry::{
-        error::Error as IdentityRegistryError, types::Identity, identities::{RegisterIdentitiesParams, DeleteIdentitiesParams},
+    use concordium_rwa_compliance::{
+        compliance::init::InitParams as ComplianceInitParams,
+        compliance_modules::allowed_nationalities::{
+            init::InitParams as ComplianceModuleAllowedNationalitiesInitParams,
+            types::{TokenAmount, TokenId},
+        },
     };
+    use concordium_rwa_identity_registry::{
+        error::Error as IdentityRegistryError,
+        identities::{DeleteIdentitiesParams, RegisterIdentitiesParams},
+        types::Identity,
+    };
+    use concordium_rwa_utils::compliance_types::CanTransferParam;
     use concordium_std::{
         schema::{SchemaType, Type},
         Address, ContractAddress,
     };
-    use quote::quote;
 
     #[test]
     fn it_works() {
@@ -118,13 +127,27 @@ mod tests {
         types.insert("IdentityRegistryError".to_owned(), IdentityRegistryError::get_type());
         types.insert("IdentityRegistryIdentity".to_owned(), Identity::get_type());
         types.insert("IdentityRegistryIdentities".to_owned(), Vec::<Identity>::get_type());
-        types.insert("IdentityRegistryRegisterIdentitiesParams".to_owned(), RegisterIdentitiesParams::get_type());
-        types.insert("IdentityRegistryDeleteIdentitiesParams".to_owned(), DeleteIdentitiesParams::get_type());
+        types.insert(
+            "IdentityRegistryRegisterIdentitiesParams".to_owned(),
+            RegisterIdentitiesParams::get_type(),
+        );
+        types.insert(
+            "IdentityRegistryDeleteIdentitiesParams".to_owned(),
+            DeleteIdentitiesParams::get_type(),
+        );
+        //-------
+        types.insert(
+            "ComplianceModuleAllowedNationalitiesInitParams".to_owned(),
+            ComplianceModuleAllowedNationalitiesInitParams::get_type(),
+        );
+        types.insert(
+            "ComplianceCanTransferParams".to_owned(),
+            CanTransferParam::<TokenId, TokenAmount>::get_type(),
+        );
+        //----
+        types.insert("ComplianceInitParams".to_owned(), ComplianceInitParams::get_type());
         let output = super::generate_typescript_types(&types);
 
-        // let output = quote! {
-        // #output
-        // };
         println!("output: {:?}", output.to_string());
         fs::write("../frontend/src/lib/ts-types.ts", output.to_string()).unwrap();
     }

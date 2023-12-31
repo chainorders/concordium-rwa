@@ -10,7 +10,7 @@ import CCDScanContractLink from "../common/concordium/CCDScanContractLink";
 export default function ContractLayout(props: { contracts: Contract[] }) {
 	const { index, subIndex } = useParams();
 	const contract = props.contracts.find((contract) => {
-		return contract.index === index && contract.subIndex === subIndex;
+		return contract.address.index.toString() === index && contract.address.subindex.toString() === subIndex;
 	});
 
 	const [onChainInfo, setOncChainInfo] = useState<InstanceInfo>();
@@ -45,7 +45,11 @@ export default function ContractLayout(props: { contracts: Contract[] }) {
 						{contract.type}
 					</Typography>
 					<Typography variant="h3" fontSize={20}>
-						<CCDScanContractLink text={contract.name} index={contract.index} subIndex={contract.subIndex} />
+						<CCDScanContractLink
+							text={contract.name}
+							index={contract.address.index.toString()}
+							subIndex={contract.address.subindex.toString()}
+						/>
 					</Typography>
 					<Typography variant="h4" fontSize={18}></Typography>
 				</Paper>

@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 concordium-rwa-identity-registry = { path = "../contracts/identity-registry" }
 concordium-rwa-security-nft = { path = "../contracts/security-nft" }
+concordium-rwa-compliance = { path = "../contracts/compliance" }
+concordium-rwa-utils = { path = "../contracts/utils" }
 concordium-std = { workspace = true, default-features = false }
 prettyplease = "0.2.15"
 quote = "1.0"

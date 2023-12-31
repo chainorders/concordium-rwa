@@ -1,6 +1,8 @@
 use concordium_cis2::StandardIdentifier;
 use concordium_std::{Address, ContractAddress, EntrypointName, Host};
 
+use crate::common_types::Identity;
+
 use super::contract_client::{ContractClientError, IContractClient, IContractState};
 
 pub const IDENTITY_REGISTRY_STANDARD_IDENTIFIER: StandardIdentifier =
@@ -9,6 +11,8 @@ const IDENTITY_REGISTRY_IS_VERIFIED_ENTRYPOINT_NAME: EntrypointName =
     EntrypointName::new_unchecked("isVerified");
 const IDENTITY_REGISTRY_IS_SAME_ENTRYPOINT_NAME: EntrypointName =
     EntrypointName::new_unchecked("isSame");
+const IDENTITY_REGISTRY_GET_IDENTITY_ENTRYPOINT_NAME: EntrypointName =
+    EntrypointName::new_unchecked("getIdentity");
 
 /// The identity registry contract.
 /// The identity registry contract is used to check if an address is verified
@@ -70,6 +74,21 @@ pub trait IdentityRegistryClient<S: IContractState>: IContractClient<S> {
             host,
             IDENTITY_REGISTRY_IS_SAME_ENTRYPOINT_NAME,
             &(address1, address2),
+        )?;
+
+        Ok(res)
+    }
+
+    /// Gets the identity of the given address.
+    fn get_identity(
+        &self,
+        host: &Host<S>,
+        address: Address,
+    ) -> Result<Identity, IdentityRegistryClientError> {
+        let res = self.invoke_contract_read_only(
+            host,
+            IDENTITY_REGISTRY_GET_IDENTITY_ENTRYPOINT_NAME,
+            &address,
         )?;
 
         Ok(res)

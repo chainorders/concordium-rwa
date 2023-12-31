@@ -1,4 +1,5 @@
 import { Contract } from "./components/contracts/ContractTypes";
+import JSON from "json-bigint";
 
 export interface AppState {
 	contracts: Contract[];
@@ -20,21 +21,36 @@ export function initialState(): AppState {
 
 export enum ActionTypes {
 	AddContract = "addContract",
+	RemoveContract = "RemoveContract",
 }
 
-export type Action = { type: ActionTypes.AddContract; contract: Contract };
+export type Action = { type: ActionTypes.AddContract | ActionTypes.RemoveContract; contract: Contract };
 
 export function reducer(state: AppState, action: Action): AppState {
+	let updatedState: AppState = state;
 	switch (action.type) {
-		case ActionTypes.AddContract: {
-			const updatedState = {
-				...state,
-				contracts: [...state.contracts, action.contract],
-			};
-			setLocalStorage(updatedState);
-			return updatedState;
-		}
-		default:
-			return state;
+		case ActionTypes.AddContract:
+			{
+				if (state.contracts.find((contract) => contract.address === action.contract.address)) {
+					return state;
+				}
+
+				updatedState = {
+					...state,
+					contracts: [...state.contracts, action.contract],
+				};
+			}
+			break;
+		case ActionTypes.RemoveContract:
+			{
+				updatedState = {
+					...state,
+					contracts: state.contracts.filter((contract) => contract.address !== action.contract.address),
+				};
+			}
+			break;
 	}
+
+	setLocalStorage(updatedState);
+	return updatedState;
 }

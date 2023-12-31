@@ -85,12 +85,22 @@ pub fn mint(
             state_builder,
         )?;
         state.increment_token_id();
+
+        // Compliance
+        let compliance_token = Token::new(token_id, ctx.self_address());
+        // Check if the owner can hold the token
+        ensure!(
+            compliance.can_transfer(host, compliance_token, owner_address, TOKEN_AMOUNT_1)?,
+            Error::InCompliantTransfer
+        );
+        // Notify compliance that the token has been minted
         compliance.minted(
             host,
             Token::new(token_id, ctx.self_address()),
             owner_address,
             TOKEN_AMOUNT_1,
         )?;
+
         logger.log(&Event::Cis2(Cis2Event::Mint(MintEvent {
             token_id,
             amount: TOKEN_AMOUNT_1,

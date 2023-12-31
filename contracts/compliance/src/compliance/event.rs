@@ -9,4 +9,6 @@ pub struct AgentUpdatedEvent {
 pub enum Event {
     AgentRemoved(AgentUpdatedEvent),
     AgentAdded(AgentUpdatedEvent),
+    ModuleAdded(ContractAddress),
+    ModuleRemoved(ContractAddress),
 }

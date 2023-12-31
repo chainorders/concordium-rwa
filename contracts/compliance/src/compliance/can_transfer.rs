@@ -1,10 +1,10 @@
 use concordium_std::*;
 
+use super::{state::State, types::*};
 use concordium_rwa_utils::{
     clients::compliance_client::{ComplianceContract, IComplianceClient},
     compliance_types::*,
 };
-use super::{state::State, types::*};
 
 /// Handles the `can_transfer` event in the `rwa_compliance` contract.
 ///
@@ -13,7 +13,7 @@ use super::{state::State, types::*};
 /// function on the `ComplianceContract` for each module.
 #[receive(
     contract = "rwa_compliance",
-    name = "can_transfer",
+    name = "canTransfer",
     parameter = "CanTransferParam<TokenId, TokenAmount>",
     return_value = "bool",
     error = "super::error::Error"
@@ -26,7 +26,6 @@ fn can_transfer(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<bool
         let can_transfer = ComplianceContract(module.to_owned()).can_transfer(
             host,
             params.token_id,
-            params.from,
             params.to,
             params.amount,
         )?;

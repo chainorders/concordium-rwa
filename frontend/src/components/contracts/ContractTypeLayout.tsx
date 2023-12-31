@@ -1,8 +1,12 @@
 import { Outlet } from "react-router-dom";
 import { Grid, Paper, Stack } from "@mui/material";
 import EntrypointsList from "./EntrypointsList";
+import { EntrypointName } from "@concordium/web-sdk";
 
-export default function Layout() {
+export default function ContractTypeLayout(props: {
+	entrypoints: Record<string, EntrypointName.Type<string>>;
+	entrypointDisplayNames: Record<string, string>;
+}) {
 	return (
 		<Stack>
 			<Grid container spacing={1}>
@@ -13,7 +17,7 @@ export default function Layout() {
 				</Grid>
 				<Grid item xs={12} md={3}>
 					<Paper>
-						<EntrypointsList />
+						<EntrypointsList {...props} />
 					</Paper>
 				</Grid>
 			</Grid>

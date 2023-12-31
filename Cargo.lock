@@ -191,8 +191,10 @@ dependencies = [
 name = "contracts-ts-generator"
 version = "0.1.0"
 dependencies = [
+ "concordium-rwa-compliance",
  "concordium-rwa-identity-registry",
  "concordium-rwa-security-nft",
+ "concordium-rwa-utils",
  "concordium-std",
  "prettyplease",
  "proc-macro2",

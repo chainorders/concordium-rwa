@@ -2,7 +2,7 @@ use concordium_std::*;
 
 use concordium_rwa_utils::{agents_state::IsAgentsState, clients::contract_client::IContractState};
 
-pub type Module = ContractAddress;
+use super::types::Module;
 
 #[derive(Serial, DeserialWithState)]
 #[concordium(state_parameter = "S")]
@@ -24,6 +24,12 @@ impl State {
 
         res
     }
+
+    pub fn add_module(&mut self, module: Module) -> bool { self.modules.insert(module) }
+
+    pub fn remove_module(&mut self, module: &Module) -> bool { self.modules.remove(module) }
+
+    pub fn modules(&self) -> Vec<Module> { self.modules.iter().map(|m| m.to_owned()).collect() }
 }
 
 impl IContractState for State {}

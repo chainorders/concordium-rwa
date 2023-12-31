@@ -5,21 +5,47 @@ import Contracts from "./components/contracts/Contracts";
 import { ActionTypes, initialState, reducer } from "./AppState";
 import ContractsLayout from "./components/contracts/ContractsLayout";
 import ContractLayout from "./components/contracts/ContractLayout";
-import { default as IdentityRegistryLayout } from "./components/contracts/IdentityRegistry/Layout";
+import ContractTypeLayout from "./components/contracts/ContractTypeLayout";
 import { default as IdentityRegistryInitialize } from "./components/contracts/IdentityRegistry/Initialize";
 import ConcordiumWalletProvider, { useWallet } from "./components/WalletProvider";
 import ConcordiumNodeClientProvider from "./components/NodeClientProvider";
-import { Contract } from "./components/contracts/ContractTypes";
-import AddAgent from "./components/common/AddAgent";
-import RemoveAgent from "./components/contracts/IdentityRegistry/RemoveAgent";
-import IsAgent from "./components/contracts/IdentityRegistry/IsAgent";
-import Agents from "./components/contracts/IdentityRegistry/Agents";
+import { Contract, ContractType } from "./components/contracts/ContractTypes";
+import AddAgent from "./components/common/agentsContract/AddAgent";
+import RemoveAgent from "./components/common/agentsContract/RemoveAgent";
+import IsAgent from "./components/common/agentsContract/IsAgent";
+import Agents from "./components/common/agentsContract/Agents";
 import RegisterIdentity from "./components/contracts/IdentityRegistry/RegisterIdentity";
 import GetIdentity from "./components/contracts/IdentityRegistry/GetIdentity";
 import IsVerified from "./components/contracts/IdentityRegistry/IsVerified";
 import DeleteIdentity from "./components/contracts/IdentityRegistry/DeleteIdentities";
-import { addAgent as identityRegistryAddAgent } from "./lib/IdentityRegistryContract";
+import {
+	ENTRYPOINTS as ID_REG_ENTRYPOINTS,
+	ENTRYPOINT_NAMES as ID_REG_ENTRYPOINT_NAMES,
+	errorString as isRegErrorString,
+	addAgent as idRegAddAgent,
+	removeAgent as idRegRemoveAgent,
+	isAgent as idRegisAgent,
+	getAgents as isRegGetAgents,
+} from "./lib/IdentityRegistryContract";
 import ErrorDisplay from "./components/common/ErrorDisplay";
+import { default as ComplianceModuleAllowedNationalitiesInitialize } from "./components/contracts/compliance/modules/allowedNationalities/Initialize";
+import {
+	ENTRYPOINTS as CM_ENTRYPOINTS,
+	ENTRYPOINT_NAMES as CM_ENTRYPOINT_NAMES,
+	canTransfer as cmCanTransfer,
+} from "./lib/ComplianceModuleAllowedNationalities";
+import CanTransfer from "./components/contracts/compliance/modules/CanTransfer";
+import { default as ComplianceInitialize } from "./components/contracts/compliance/Initialize";
+import {
+	ENTRYPOINTS as COMPLIANCE_ENTRYPOINTS,
+	ENTRYPOINT_NAMES as COMPLIANCE_ENTRYPOINT_NAMES,
+	addAgent as compAddAgent,
+	errorString as compErrorString,
+	isAgent as compIsAgent,
+	getAgents as compGetAgents,
+	removeAgent as compRemoveAgent,
+	canTransfer as compCanTransfer,
+} from "./lib/Compliance";
 
 // Header component
 function Header() {
@@ -82,6 +108,9 @@ function Layout() {
 	const onContractInitialized = (contract: Contract) => {
 		dispatch({ type: ActionTypes.AddContract, contract });
 	};
+	const onDeleteContract = (contract: Contract) => {
+		dispatch({ type: ActionTypes.RemoveContract, contract });
+	};
 
 	return (
 		<ConcordiumNodeClientProvider>
@@ -91,17 +120,49 @@ function Layout() {
 						<Header />
 						<Routes>
 							<Route path="contracts" element={<ContractsLayout />}>
-								<Route path="" element={<Contracts contracts={state.contracts} />} />
-								<Route
-									path="IdentityRegistry/init"
-									element={<IdentityRegistryInitialize onSuccess={onContractInitialized} />}
-								/>
+								<Route path="" element={<Contracts contracts={state.contracts} onDelete={onDeleteContract} />} />
+								<Route path="init">
+									<Route
+										path="IdentityRegistry"
+										element={<IdentityRegistryInitialize onSuccess={onContractInitialized} />}
+									/>
+									<Route
+										path="ComplianceModule/AllowedNationalities"
+										element={
+											<ComplianceModuleAllowedNationalitiesInitialize
+												onSuccess={onContractInitialized}
+												identityRegistries={state.contracts.filter((c) => c.type == ContractType.IdentityRegistry)}
+											/>
+										}
+									/>
+									<Route
+										path="Compliance"
+										element={
+											<ComplianceInitialize
+												onSuccess={onContractInitialized}
+												complianceModules={state.contracts.filter((c) => c.type == ContractType.ComplianceModule)}
+											/>
+										}
+									/>
+									<Route path="*" element={<ErrorDisplay text="Not Implemented: Work In Progress" />} />
+								</Route>
 								<Route path=":index/:subIndex" element={<ContractLayout contracts={state.contracts} />}>
-									<Route path="IdentityRegistry" element={<IdentityRegistryLayout />}>
-										<Route path="addAgent" element={<AddAgent onClick={identityRegistryAddAgent} />} />
-										<Route path="removeAgent" element={<RemoveAgent />} />
-										<Route path="isAgent" element={<IsAgent />} />
-										<Route path="agents" element={<Agents />} />
+									<Route
+										path="IdentityRegistry"
+										element={ContractTypeLayout({
+											entrypoints: ID_REG_ENTRYPOINTS,
+											entrypointDisplayNames: ID_REG_ENTRYPOINT_NAMES,
+										})}>
+										<Route
+											path="addAgent"
+											element={<AddAgent onClick={idRegAddAgent} errorString={isRegErrorString} />}
+										/>
+										<Route
+											path="removeAgent"
+											element={<RemoveAgent onClick={idRegRemoveAgent} errorString={isRegErrorString} />}
+										/>
+										<Route path="isAgent" element={<IsAgent isAgent={idRegisAgent} />} />
+										<Route path="agents" element={<Agents getAgents={isRegGetAgents} />} />
 										<Route path="identities" element={<div>Identities</div>} />
 										<Route path="registerIdentities" element={<RegisterIdentity />} />
 										<Route path="getIdentity" element={<GetIdentity />} />
@@ -110,6 +171,35 @@ function Layout() {
 										<Route path="" element={<Navigate to="identities" />} />
 										<Route path="*" element={<ErrorDisplay text="Not Implemented: Work In Progress" />} />
 									</Route>
+									<Route
+										path="ComplianceModule"
+										element={ContractTypeLayout({
+											entrypoints: CM_ENTRYPOINTS,
+											entrypointDisplayNames: CM_ENTRYPOINT_NAMES,
+										})}>
+										<Route path="canTransfer" element={<CanTransfer canTransfer={cmCanTransfer} />} />
+										<Route path="*" element={<ErrorDisplay text="Not Implemented: Work In Progress" />} />
+									</Route>
+									<Route
+										path="Compliance"
+										element={ContractTypeLayout({
+											entrypoints: COMPLIANCE_ENTRYPOINTS,
+											entrypointDisplayNames: COMPLIANCE_ENTRYPOINT_NAMES,
+										})}>
+										<Route
+											path="addAgent"
+											element={<AddAgent onClick={compAddAgent} errorString={compErrorString} />}
+										/>
+										<Route
+											path="removeAgent"
+											element={<RemoveAgent onClick={compRemoveAgent} errorString={compErrorString} />}
+										/>
+										<Route path="isAgent" element={<IsAgent isAgent={compIsAgent} />} />
+										<Route path="agents" element={<Agents getAgents={compGetAgents} />} />
+										<Route path="canTransfer" element={<CanTransfer canTransfer={compCanTransfer} />} />
+										<Route path="*" element={<ErrorDisplay text="Not Implemented: Work In Progress" />} />
+									</Route>
+									<Route path="*" element={<ErrorDisplay text="Invalid Contract Type" />} />
 								</Route>
 							</Route>
 						</Routes>

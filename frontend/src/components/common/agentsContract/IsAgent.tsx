@@ -1,13 +1,20 @@
 import { Button, Stack, Typography } from "@mui/material";
-import AddressField from "../../common/concordium/AddressField";
+import AddressField from "../concordium/AddressField";
 import { useState } from "react";
-import { Agent } from "../../../lib/common/types";
+import { Agent, InvokeContractResult } from "../../../lib/common/types";
 import { useParams } from "react-router-dom";
-import { ContractAddress } from "@concordium/web-sdk";
-import { isAgent } from "../../../lib/IdentityRegistryContract";
+import { AccountAddress, ConcordiumGRPCClient, ContractAddress } from "@concordium/web-sdk";
 import { useNodeClient } from "../../NodeClientProvider";
+import ErrorDisplay from "../ErrorDisplay";
 
-export default function IsAgent() {
+export default function IsAgent(props: {
+	isAgent: (
+		provider: ConcordiumGRPCClient,
+		contract: ContractAddress.Type,
+		agent: Agent,
+		invoker?: AccountAddress.Type
+	) => Promise<InvokeContractResult<boolean, string>>;
+}) {
 	const { provider } = useNodeClient();
 	const { index, subIndex } = useParams();
 	const contract = ContractAddress.create(BigInt(index!), BigInt(subIndex!));
@@ -18,7 +25,7 @@ export default function IsAgent() {
 
 	const onClick = async () => {
 		try {
-			const result = await isAgent(provider, contract, agent!);
+			const result = await props.isAgent(provider, contract, agent!);
 			switch (result.tag) {
 				case "success":
 					setResult(result.returnValue);
@@ -38,7 +45,7 @@ export default function IsAgent() {
 			<Button disabled={!isFromValid} onClick={onClick}>
 				Check Is Agent
 			</Button>
-			{error && <Typography color="error">{error}</Typography>}
+			{error && <ErrorDisplay text={error} />}
 			{result !== undefined && <Typography>{result ? "Is Agent" : "Is Not Agent"}</Typography>}
 		</Stack>
 	);

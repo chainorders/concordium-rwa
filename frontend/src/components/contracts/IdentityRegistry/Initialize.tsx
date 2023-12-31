@@ -1,40 +1,31 @@
-import { BlockItemSummaryInBlock, TransactionKindString, TransactionSummaryType } from "@concordium/web-sdk";
+import { BlockItemSummaryInBlock } from "@concordium/web-sdk";
 import { useWallet } from "../../WalletProvider";
 import SendTransactionButton from "../../common/SendTransactionButton";
-import { DefaultIdentityRegistryContract, IdentityRegistryContract } from "../ContractTypes";
+import { Contract, ContractType } from "../ContractTypes";
 import { Stack, TextField } from "@mui/material";
 import { useState } from "react";
 import { errorString, initialize } from "../../../lib/IdentityRegistryContract";
+import { parseContractAddress } from "../../../lib/common/common";
+import ErrorDisplay from "../../common/ErrorDisplay";
 
-export default function Initialize(props: { onSuccess: (contract: IdentityRegistryContract) => void }) {
+export default function Initialize(props: { onSuccess: (contract: Contract) => void }) {
 	const wallet = useWallet();
 	const [form, setForm] = useState({
 		contractDisplayName: "",
-		index: "",
-		subIndex: "",
 	});
+	const [error, setError] = useState("");
 
 	const handleSuccess = (outcome: BlockItemSummaryInBlock) => {
-		switch (outcome.summary.type) {
-			case TransactionSummaryType.AccountTransaction:
-				switch (outcome.summary.transactionType) {
-					case TransactionKindString.InitContract:
-						setFormValue("index", outcome.summary.contractInitialized.address.index.toString());
-						setFormValue("subIndex", outcome.summary.contractInitialized.address.subindex.toString());
-
-						props.onSuccess({
-							...DefaultIdentityRegistryContract,
-							name: form.contractDisplayName,
-							index: outcome.summary.contractInitialized.address.index.toString(),
-							subIndex: outcome.summary.contractInitialized.address.subindex.toString(),
-						});
-						break;
-					default:
-						console.error("Unknown account transaction type", outcome.summary.transactionType);
-				}
-				break;
-			default:
-				console.error("Unknown transaction type", outcome.summary.type);
+		try {
+			const address = parseContractAddress(outcome);
+			props.onSuccess({
+				address,
+				name: form.contractDisplayName,
+				type: ContractType.IdentityRegistry,
+			});
+		} catch (error) {
+			setError(error instanceof Error ? error.message : "Unknown error");
+			return;
 		}
 	};
 
@@ -50,6 +41,8 @@ export default function Initialize(props: { onSuccess: (contract: IdentityRegist
 		<form>
 			<Stack spacing={2}>
 				<TextField
+					id="contractDisplayName"
+					name="contractDisplayName"
 					label="Contract Display Name"
 					variant="outlined"
 					fullWidth
@@ -64,6 +57,7 @@ export default function Initialize(props: { onSuccess: (contract: IdentityRegist
 					disabled={!isFormValid()}>
 					Initialize Identity Registry
 				</SendTransactionButton>
+				{error && <ErrorDisplay text={error} />}
 			</Stack>
 		</form>
 	);

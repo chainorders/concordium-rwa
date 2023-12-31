@@ -81,7 +81,7 @@ pub fn transfer(
             Error::UnVerifiedIdentity
         );
         ensure!(
-            compliance.can_transfer(host, compliance_token, from, to.address(), amount)?,
+            compliance.can_transfer(host, compliance_token, to.address(), amount)?,
             Error::InCompliantTransfer
         );
 
