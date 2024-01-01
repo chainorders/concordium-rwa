@@ -19,7 +19,6 @@ export default function AddressField(props: ConcordiumAddressFieldProps) {
 	const handleTypeChange = (e: SelectChangeEvent) => {
 		setType(e.target.value as AddressType);
 		setValue(undefined);
-		props.onChange(undefined);
 	};
 
 	const handleChange = (address?: Address) => {

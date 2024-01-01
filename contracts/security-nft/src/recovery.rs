@@ -58,7 +58,7 @@ pub fn recover(
     error = "super::error::Error",
     return_value = "Option<Address>"
 )]
-pub fn is_recovered(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<Option<Address>> {
+pub fn recovery_address(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<Option<Address>> {
     let address: Address = ctx.parameter_cursor().get()?;
     Ok(host.state().get_recovery_address(&address))
 }

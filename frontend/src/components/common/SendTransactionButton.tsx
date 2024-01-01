@@ -1,4 +1,5 @@
 import {
+	BaseAccountTransactionSummary,
 	BlockItemSummaryInBlock,
 	RejectReasonTag,
 	RejectedInit,
@@ -7,20 +8,13 @@ import {
 	TransactionKindString,
 	TransactionStatusEnum,
 	TransactionSummaryType,
+	UpdateContractSummary,
 } from "@concordium/web-sdk";
 import { useEffect, useState } from "react";
 import { useNodeClient } from "../NodeClientProvider";
 import { Button, CircularProgress, Icon, Typography } from "@mui/material";
 import { CheckCircle } from "@mui/icons-material";
 import CCDScanTransactionLink from "./concordium/CCDScanTransactionLink";
-
-export interface SendTransactionButtonProps {
-	onClick: () => Promise<string>;
-	children: React.ReactNode;
-	disabled?: boolean;
-	onSuccess?: (outcome: BlockItemSummaryInBlock, txnHash: TransactionHash.Type) => void;
-	toContractError?: (reason: RejectedInit | RejectedReceive) => string;
-}
 
 type InitState = {
 	type: "init";
@@ -43,6 +37,20 @@ type FinalizedState = {
 	error: string;
 };
 
+export interface SendTransactionButtonProps {
+	onClick: () => Promise<string>;
+	children: React.ReactNode;
+	disabled?: boolean;
+	onFinalized?: (outcome: BlockItemSummaryInBlock, txnHash: TransactionHash.Type) => void;
+	onFinalizedError?: (reason: RejectedInit | RejectedReceive) => string;
+	/// This will only be called when the transaction is an update contract transaction
+	onFinalizedSuccess?: (
+		summary: BaseAccountTransactionSummary & UpdateContractSummary,
+		txnHash: TransactionHash.Type
+	) => void;
+	// Called after final click after transaction is finalized
+	onDone?: () => void;
+}
 export default function SendTransactionButton(props: SendTransactionButtonProps) {
 	const nodeClient = useNodeClient();
 	const [state, setState] = useState<InitState | SentState | FinalizedState>({
@@ -64,7 +72,7 @@ export default function SendTransactionButton(props: SendTransactionButtonProps)
 							case RejectReasonTag.RejectedReceive: {
 								console.error(outcome.summary.rejectReason);
 								error =
-									props.toContractError?.(outcome.summary.rejectReason) ||
+									props.onFinalizedError?.(outcome.summary.rejectReason) ||
 									`${outcome.summary.rejectReason.tag}: ${outcome.summary.rejectReason.rejectReason}`;
 								break;
 							}
@@ -72,6 +80,11 @@ export default function SendTransactionButton(props: SendTransactionButtonProps)
 								error = outcome.summary.rejectReason.tag;
 						}
 						break;
+					case TransactionKindString.Update: {
+						error = "";
+						props.onFinalizedSuccess && props.onFinalizedSuccess(outcome.summary, txnHash);
+						break;
+					}
 					default:
 						error = "";
 				}
@@ -86,7 +99,7 @@ export default function SendTransactionButton(props: SendTransactionButtonProps)
 			txnHash: txnHash,
 			error,
 		});
-		props.onSuccess && props.onSuccess(outcome, txnHash!);
+		props.onFinalized && props.onFinalized(outcome, txnHash!);
 	};
 
 	useEffect(() => {
@@ -150,6 +163,7 @@ export default function SendTransactionButton(props: SendTransactionButtonProps)
 			status: undefined,
 			txnHash: undefined,
 		});
+		props.onDone?.();
 	};
 
 	return (

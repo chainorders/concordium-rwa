@@ -126,9 +126,9 @@ export default function RegisterIdentity() {
 			</Paper>
 			<SendTransactionButton
 				disabled={!isIdentityValid()}
-				toContractError={errorString}
+				onFinalizedError={errorString}
 				onClick={() => registerIdentities(wallet.provider!, wallet.currentAccount!, contract, [identity! as Identity])}
-				onSuccess={console.log}>
+				onFinalized={console.log}>
 				Register Identity
 			</SendTransactionButton>
 		</Stack>

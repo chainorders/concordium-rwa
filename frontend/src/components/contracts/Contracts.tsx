@@ -112,6 +112,34 @@ export default function Contracts(props: Props) {
 					})}
 				</List>
 			</Paper>
+			<Paper sx={{ padding: 2 }} variant="outlined">
+				<Typography variant="h2" fontSize={20}>
+					Security NFT Contracts
+				</Typography>
+				<List>
+					{props.contracts
+						.filter((c) => c.type == ContractType.Nft)
+						.map((contract) => {
+							return (
+								<ListItem
+									disablePadding
+									key={contract.address.index.toString()}
+									secondaryAction={
+										<IconButton edge="end" aria-label="delete" onClick={() => props.onDelete(contract)}>
+											<Delete />
+										</IconButton>
+									}>
+									<ListItemButton>
+										<ListItemIcon>
+											<ViewModule />
+										</ListItemIcon>
+										<ListItemText primary={<ContractLink contract={contract} />} />
+									</ListItemButton>
+								</ListItem>
+							);
+						})}
+				</List>
+			</Paper>
 		</Stack>
 	);
 }

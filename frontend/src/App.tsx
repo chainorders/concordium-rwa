@@ -34,7 +34,7 @@ import {
 	ENTRYPOINT_NAMES as CM_ENTRYPOINT_NAMES,
 	canTransfer as cmCanTransfer,
 } from "./lib/ComplianceModuleAllowedNationalities";
-import CanTransfer from "./components/contracts/compliance/modules/CanTransfer";
+import CanTransfer from "./components/contracts/compliance/CanTransfer";
 import { default as ComplianceInitialize } from "./components/contracts/compliance/Initialize";
 import {
 	ENTRYPOINTS as COMPLIANCE_ENTRYPOINTS,
@@ -46,6 +46,20 @@ import {
 	removeAgent as compRemoveAgent,
 	canTransfer as compCanTransfer,
 } from "./lib/Compliance";
+import {
+	ENTRYPOINTS as NFT_ENTRYPOINTS,
+	ENTRYPOINT_NAMES as NFT_ENTRYPOINT_NAMES,
+	isAgent as nftIsAgent,
+	addAgent as nftAddAgent,
+	errorString as nftErrorString,
+	removeAgent as nftRemoveAgent,
+	getAgents as nftGetAgents,
+} from "./lib/NftContract";
+import Initialize from "./components/contracts/securityNft/Initialize";
+import Mint from "./components/contracts/securityNft/Mint";
+import Transfer from "./components/contracts/securityNft/Transfer";
+import Burn from "./components/contracts/securityNft/Burn";
+import BalanceOf from "./components/contracts/securityNft/BalanceOf";
 
 // Header component
 function Header() {
@@ -144,6 +158,16 @@ function Layout() {
 											/>
 										}
 									/>
+									<Route
+										path="Nft"
+										element={
+											<Initialize
+												onSuccess={onContractInitialized}
+												complianceContracts={state.contracts.filter((c) => c.type == ContractType.Compliance)}
+												identityRegistries={state.contracts.filter((c) => c.type == ContractType.IdentityRegistry)}
+											/>
+										}
+									/>
 									<Route path="*" element={<ErrorDisplay text="Not Implemented: Work In Progress" />} />
 								</Route>
 								<Route path=":index/:subIndex" element={<ContractLayout contracts={state.contracts} />}>
@@ -197,6 +221,25 @@ function Layout() {
 										<Route path="isAgent" element={<IsAgent isAgent={compIsAgent} />} />
 										<Route path="agents" element={<Agents getAgents={compGetAgents} />} />
 										<Route path="canTransfer" element={<CanTransfer canTransfer={compCanTransfer} />} />
+										<Route path="*" element={<ErrorDisplay text="Not Implemented: Work In Progress" />} />
+									</Route>
+									<Route
+										path="Nft"
+										element={ContractTypeLayout({
+											entrypoints: NFT_ENTRYPOINTS,
+											entrypointDisplayNames: NFT_ENTRYPOINT_NAMES,
+										})}>
+										<Route path="addAgent" element={<AddAgent onClick={nftAddAgent} errorString={nftErrorString} />} />
+										<Route
+											path="removeAgent"
+											element={<RemoveAgent onClick={nftRemoveAgent} errorString={nftErrorString} />}
+										/>
+										<Route path="isAgent" element={<IsAgent isAgent={nftIsAgent} />} />
+										<Route path="agents" element={<Agents getAgents={nftGetAgents} />} />
+										<Route path="mint" element={<Mint />} />
+										<Route path="transfer" element={<Transfer />} />
+										<Route path="burn" element={<Burn />} />
+										<Route path="balanceOf" element={<BalanceOf />} />
 										<Route path="*" element={<ErrorDisplay text="Not Implemented: Work In Progress" />} />
 									</Route>
 									<Route path="*" element={<ErrorDisplay text="Invalid Contract Type" />} />

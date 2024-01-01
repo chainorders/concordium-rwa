@@ -23,8 +23,8 @@ export default function DeleteIdentity(props: IdentityRegistryAddAgentProps) {
 			<AddressField onChange={(address) => setIdentity(address)} name="Identity" helperText="Identity" />
 			<SendTransactionButton
 				disabled={!isFromValid}
-				onSuccess={() => props.onSuccess?.(contract, identity!)}
-				toContractError={(r) => errorString(r)}
+				onFinalized={() => props.onSuccess?.(contract, identity!)}
+				onFinalizedError={(r) => errorString(r)}
 				onClick={() => deleteIdentities(wallet.provider!, wallet.currentAccount!, contract, [identity!])}>
 				Delete Identity
 			</SendTransactionButton>

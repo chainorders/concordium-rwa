@@ -32,8 +32,8 @@ export default function RemoveAgent(props: RemoveAgentProps) {
 			<AddressField onChange={(address) => setAgent(address)} name="AgentAddress" helperText="Agent" />
 			<SendTransactionButton
 				disabled={!isFromValid}
-				onSuccess={() => props.onSuccess?.(contract, agent!)}
-				toContractError={(r) => errorString(r)}
+				onFinalized={() => props.onSuccess?.(contract, agent!)}
+				onFinalizedError={(r) => errorString(r)}
 				onClick={() => props.onClick(wallet.provider!, wallet.currentAccount!, contract, agent!)}>
 				Remove Agent
 			</SendTransactionButton>

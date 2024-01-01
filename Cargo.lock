@@ -191,6 +191,8 @@ dependencies = [
 name = "contracts-ts-generator"
 version = "0.1.0"
 dependencies = [
+ "base64",
+ "concordium-cis2",
  "concordium-rwa-compliance",
  "concordium-rwa-identity-registry",
  "concordium-rwa-security-nft",

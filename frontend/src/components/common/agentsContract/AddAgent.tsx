@@ -32,8 +32,8 @@ export default function AddAgent(props: AddAgentProps) {
 			<AddressField onChange={(address) => setAgent(address)} name="AgentAddress" helperText="Agent" />
 			<SendTransactionButton
 				disabled={!isFromValid}
-				onSuccess={() => props.onSuccess?.(contract, agent!)}
-				toContractError={(r) => props.errorString(r)}
+				onFinalized={() => props.onSuccess?.(contract, agent!)}
+				onFinalizedError={(r) => props.errorString(r)}
 				onClick={() => props.onClick(wallet.provider!, wallet.currentAccount!, contract, agent!)}>
 				Add Agent
 			</SendTransactionButton>

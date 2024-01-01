@@ -9,8 +9,10 @@ concordium-rwa-security-nft = { path = "../contracts/security-nft" }
 concordium-rwa-compliance = { path = "../contracts/compliance" }
 concordium-rwa-utils = { path = "../contracts/utils" }
 concordium-std = { workspace = true, default-features = false }
+concordium-cis2 = { workspace = true, default-features = false }
 prettyplease = "0.2.15"
 quote = "1.0"
 syn = { version = "2.0"}
 proc-macro2 = "1.0"
 ts_quote = "0.2.1"
+base64 = "0.21.5"

@@ -72,9 +72,7 @@ pub fn burn(
         // Sender is the Owner of the token
         owner.eq(&sender)
         // Sender is an operator of the owner
-        || state.is_operator(&owner, &sender)
-        // Sender is the sponsor (CIS3) of the transaction 
-        || state.is_sponsor(&sender);
+        || state.is_operator(&owner, &sender);
 
         ensure!(is_authorized, Error::Unauthorized);
         state.ensure_token_exists(&token_id)?;

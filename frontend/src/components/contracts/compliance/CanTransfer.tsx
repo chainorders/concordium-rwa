@@ -1,5 +1,5 @@
-import { Button, Stack, TextField, Typography } from "@mui/material";
-import AddressField from "../../../common/concordium/AddressField";
+import { Button, Stack, Typography } from "@mui/material";
+import AddressField from "../../common/concordium/AddressField";
 import {
 	AccountAddress,
 	Address,
@@ -9,12 +9,13 @@ import {
 	RejectedReceive,
 } from "@concordium/web-sdk";
 import { useState } from "react";
-import ContractAddressField from "../../../common/concordium/ContractAddressField";
-import { useNodeClient } from "../../../NodeClientProvider";
+import ContractAddressField from "../../common/concordium/ContractAddressField";
+import { useNodeClient } from "../../NodeClientProvider";
 import { useParams } from "react-router-dom";
-import ErrorDisplay from "../../../common/ErrorDisplay";
-import { CanTransferParams, Error as ComplianceError } from "../../../../lib/Compliance";
-import { InvokeContractResult } from "../../../../lib/common/types";
+import ErrorDisplay from "../../common/ErrorDisplay";
+import { CanTransferParams, Error as ComplianceError } from "../../../lib/Compliance";
+import { InvokeContractResult } from "../../../lib/common/types";
+import TokenIdField from "../../common/concordium/TokenIdField";
 export type TokenId = HexString;
 
 export default function CanTransfer(props: {
@@ -78,14 +79,7 @@ export default function CanTransfer(props: {
 	return (
 		<Stack spacing={2}>
 			<Typography variant="h5">Can Transfer</Typography>
-			<TextField
-				name="tokenId"
-				label="Token ID"
-				type="number"
-				onChange={(e) => setFormValue("tokenId", Number(e.target.value).toString(16).toUpperCase().padStart(2, "0"))}
-				value={parseInt(form.tokenId, 16)}
-				helperText={`Token Id HEX: ${form.tokenId}`}
-			/>
+			<TokenIdField name="tokenId" onChange={(a) => setFormValue("tokenId", a)} value={form.tokenId} sizeByte={1} />
 			<Typography variant="caption">Token Contract</Typography>
 			<ContractAddressField
 				onChange={(a) => setFormValue("tokenContract", a)}

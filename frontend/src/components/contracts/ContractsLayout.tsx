@@ -28,6 +28,11 @@ export default function ContractsLayout() {
 									<ListItemText primary="Initialize" secondary="Compliance Contract" />
 								</ListItemButton>
 							</ListItem>
+							<ListItem disablePadding disableGutters>
+								<ListItemButton onClick={() => navigate("init/Nft")}>
+									<ListItemText primary="Initialize" secondary="Security NFT Contract" />
+								</ListItemButton>
+							</ListItem>
 						</List>
 					</Stack>
 				</Paper>

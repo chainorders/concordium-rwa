@@ -8,12 +8,10 @@ export interface AccountAddressFieldProps extends Omit<TextFieldProps, "onChange
 }
 
 export default function AccountAddressField(props: AccountAddressFieldProps) {
-	const [value, setValue] = useState(props.value?.address || "");
 	const [error, setError] = useState("");
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setError("");
-		setValue(e.target.value);
 
 		try {
 			const address = AccountAddress.fromBase58(e.target.value);
@@ -29,7 +27,7 @@ export default function AccountAddressField(props: AccountAddressFieldProps) {
 			name="account-address"
 			fullWidth
 			error={!!error}
-			value={value}
+			value={props.value?.address || ""}
 			onChange={handleChange}
 			helperText={(props.helperText ? props.helperText + " " : "") + "Account Address"}
 		/>

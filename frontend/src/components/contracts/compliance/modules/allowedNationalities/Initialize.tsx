@@ -110,8 +110,8 @@ export default function Initialize(props: { onSuccess: (contract: Contract) => v
 						nationalities: form.nationalities,
 					})
 				}
-				onSuccess={handleSuccess}
-				toContractError={(r) => errorString(r)}
+				onFinalized={handleSuccess}
+				onFinalizedError={(r) => errorString(r)}
 				disabled={!isFormValid()}>
 				Initialize Compliance Module Allowed Nationalities
 			</SendTransactionButton>

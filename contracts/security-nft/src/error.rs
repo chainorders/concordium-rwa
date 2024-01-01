@@ -46,13 +46,17 @@ impl Error {
             Error::InvalidTokenId => -42000001,
             Error::InsufficientFunds => -42000002,
             Error::Unauthorized => -42000003,
-            Error::ParseError => -42000004,
-            Error::LogError => -42000005,
-            Error::UnVerifiedIdentity => -42000006,
-            Error::InCompliantTransfer => -42000007,
-            Error::ComplianceError => -42000008,
-            // Add other error mappings here
-            _ => -42000009,
+            Error::ParseError => -1,
+            Error::LogError => -2,
+            Error::UnVerifiedIdentity => -3,
+            Error::InCompliantTransfer => -4,
+            Error::ComplianceError => -5,
+            Error::CallContractError => -6,
+            Error::PausedToken => -7,
+            Error::InvalidAmount => -8,
+            Error::InvalidAddress => -9,
+            Error::AgentAlreadyExists => -10,
+            Error::AgentNotFound => -11,
         })
         .unwrap()
     }

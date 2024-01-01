@@ -145,8 +145,8 @@ export default function Initialize(props: { onSuccess: (contract: Contract) => v
 			</Paper>
 			<SendTransactionButton
 				onClick={() => initialize(wallet.provider!, wallet.currentAccount!, { modules })}
-				onSuccess={handleSuccess}
-				toContractError={(r) => errorString(r)}
+				onFinalized={handleSuccess}
+				onFinalizedError={(r) => errorString(r)}
 				disabled={!isValid}>
 				Initialize Compliance Contract
 			</SendTransactionButton>

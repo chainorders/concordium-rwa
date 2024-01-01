@@ -197,7 +197,7 @@ pub fn forced_transfer(
             to: to.address(),
         })))?;
 
-        if let Address::Contract(from_contract) = from {
+        if let Address::Contract(_from_contract) = from {
             //TODO: there should be a way to notify that the transfer has been
             // forced Ex. A token is sent to the marketplace for
             // selling. Upon a forced transfer since marketplace
