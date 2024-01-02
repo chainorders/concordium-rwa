@@ -73,7 +73,7 @@ export class ReceiveMethod<TIn, TOut = never> {
 		provider: WalletApi,
 		account: AccountAddress.Type,
 		address: ContractAddress.Type,
-		params?: TIn,
+		params: TIn,
 		amount: CcdAmount.Type = CcdAmount.fromCcd(0)
 	) {
 		const schema: SchemaSource | undefined = this.paramsSchemaBase64

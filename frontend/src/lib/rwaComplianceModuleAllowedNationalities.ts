@@ -1,4 +1,4 @@
-import { ContractName, EntrypointName, ModuleReference } from "@concordium/web-sdk";
+import { ContractEvent, ContractName, EntrypointName, ModuleReference } from "@concordium/web-sdk";
 import { InitMethod, ReceiveMethod } from "./GenericContract";
 export type InitRequest = { nationalities: number[][]; identity_registry: { index: number; subindex: number } };
 export const InitRequestSchema = "FAACAAAADQAAAG5hdGlvbmFsaXRpZXMQAhACAhEAAABpZGVudGl0eV9yZWdpc3RyeQw=";
