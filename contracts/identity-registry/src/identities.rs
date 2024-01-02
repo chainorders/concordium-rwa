@@ -136,6 +136,7 @@ pub fn delete_identities(
     contract = "rwa_identity_registry",
     name = "hasIdentity",
     parameter = "Address",
+    return_value = "bool",
     error = "super::error::Error"
 )]
 pub fn has_identity(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<bool> {

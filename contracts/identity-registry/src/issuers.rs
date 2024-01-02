@@ -84,7 +84,7 @@ pub fn add_issuer(
     name = "removeIssuer",
     mutable,
     enable_logger,
-    parameter = "ContractAddress",
+    parameter = "Issuer",
     error = "super::error::Error"
 )]
 pub fn remove_issuer(

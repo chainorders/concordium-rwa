@@ -1,7 +1,9 @@
 [package]
-name = "contracts-ts-generator"
+name = "contracts-ts-generator-v2"
 version = "0.1.0"
 edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 concordium-rwa-identity-registry = { path = "../contracts/identity-registry" }
@@ -16,3 +18,5 @@ syn = { version = "2.0"}
 proc-macro2 = "1.0"
 ts_quote = "0.2.1"
 base64 = "0.21.5"
+convert_case = "0.6.0"
+concordium_base = "3.2.0"
