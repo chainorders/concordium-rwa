@@ -1,11 +1,13 @@
 use concordium_std::schema::Type;
 
+#[derive(Clone)]
 pub struct ContractInitMethod {
     pub module_reference: String,
     pub request:          Option<Type>,
     pub error:            Option<Type>,
 }
 
+#[derive(Clone)]
 pub struct ContractReceiveMethod {
     pub name:       String,
     pub request:    Option<Type>,
@@ -14,6 +16,7 @@ pub struct ContractReceiveMethod {
     pub is_mutable: bool,
 }
 
+#[derive(Clone)]
 pub struct Contract {
     pub name:            String,
     pub receive_methods: Vec<ContractReceiveMethod>,

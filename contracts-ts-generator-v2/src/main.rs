@@ -1,33 +1,35 @@
 use std::{fs, path::Path};
 
 use any_contract::create_contracts;
+use client_generator::generated_contract_client_ts_types;
 use concordium_base::smart_contracts::WasmModule;
 use concordium_std::{schema::VersionedModuleSchema, Cursor, Deserial};
 use convert_case::{Case, Casing};
-use generator::generated_contract_ts_types;
+use ui_generator::generated_contract_client_ui_types;
 
 mod any_contract;
+mod client_generator;
 mod contracts;
-mod generator;
+pub mod ui_generator;
 
 fn main() {
     let modules: Vec<(String, String)> = vec![
-        (
-            "contracts/identity-registry/contract.wasm.v1".to_owned(),
-            "contracts/identity-registry/schema.bin".to_owned(),
-        ),
-        (
-            "contracts/compliance/contract.wasm.v1".to_owned(),
-            "contracts/compliance/schema.bin".to_owned(),
-        ),
+        // (
+        //     "contracts/identity-registry/contract.wasm.v1".to_owned(),
+        //     "contracts/identity-registry/schema.bin".to_owned(),
+        // ),
+        // (
+        //     "contracts/compliance/contract.wasm.v1".to_owned(),
+        //     "contracts/compliance/schema.bin".to_owned(),
+        // ),
         (
             "contracts/security-nft/contract.wasm.v1".to_owned(),
             "contracts/security-nft/schema.bin".to_owned(),
         ),
-        (
-            "contracts/sponsor/contract.wasm.v1".to_owned(),
-            "contracts/sponsor/schema.bin".to_owned(),
-        ),
+        // (
+        //     "contracts/sponsor/contract.wasm.v1".to_owned(),
+        //     "contracts/sponsor/schema.bin".to_owned(),
+        // ),
     ];
     modules
         .iter()
@@ -37,11 +39,22 @@ fn main() {
             (module_ref, schema)
         })
         .flat_map(|(module_ref, module_schema)| create_contracts(module_ref, module_schema))
-        .map(|contract| (contract.name.to_owned(), generated_contract_ts_types(contract)))
-        .for_each(|(name, code)| {
+        .map(|contract| {
+            (
+                contract.name.to_owned(),
+                generated_contract_client_ts_types(contract.to_owned()),
+                generated_contract_client_ui_types(contract),
+            )
+        })
+        .for_each(|(name, client_code, ui_code)| {
             fs::write(
-                format!("frontend/src/lib/{}.ts", name.to_case(Case::Pascal)),
-                code.to_string(),
+                format!("frontend/src/lib/{}.ts", name.to_case(Case::Camel)),
+                client_code.to_string(),
+            )
+            .expect("could not write to file");
+            fs::write(
+                format!("frontend/src/lib/{}Ui.ts", name.to_case(Case::Camel)),
+                ui_code.to_string(),
             )
             .expect("could not write to file");
         })

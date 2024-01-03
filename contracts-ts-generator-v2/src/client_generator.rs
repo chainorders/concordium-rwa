@@ -107,7 +107,7 @@ fn get_schema_string(ty: &Type) -> String {
     general_purpose::STANDARD.encode(&ty_bytes)
 }
 
-pub fn generated_contract_ts_types(contract: Contract) -> TokenStream {
+pub fn generated_contract_client_ts_types(contract: Contract) -> TokenStream {
     let contract_name = format_ident!("{}", contract.name.to_case(Case::Pascal));
     let contract_name_string = contract.name.to_owned();
     let mut method_types = Vec::<TokenStream>::new();
