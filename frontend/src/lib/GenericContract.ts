@@ -21,6 +21,8 @@ import {
 	serializeTypeValue,
 } from "@concordium/web-sdk";
 import { InvokeContractSuccessResult } from "./common/types";
+import { Buffer } from "buffer/";
+
 export const CONTRACT_NAME: ContractName.Type = ContractName.fromString(
 	import.meta.env.VITE_NFT_CONTRACT_NAME as string
 );

@@ -5,14 +5,15 @@ import { EntrypointName } from "@concordium/web-sdk";
 export default function EntrypointsList(props: {
 	entrypoints: Record<string, EntrypointName.Type<string>>;
 	entrypointDisplayNames: Record<string, string>;
+	disabled?: boolean;
 }) {
 	const navigation = useNavigate();
 	return (
 		<List>
 			{Object.keys(props.entrypoints).map((key) => {
 				return (
-					<ListItem disablePadding key={key}>
-						<ListItemButton onClick={() => navigation(key)}>
+					<ListItem disablePadding key={key} disabled={props.disabled}>
+						<ListItemButton onClick={() => navigation(key)} disabled={props.disabled}>
 							<ListItemText primary={props.entrypointDisplayNames[key]} secondary={key} />
 						</ListItemButton>
 					</ListItem>
