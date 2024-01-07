@@ -117,6 +117,7 @@ pub fn un_pause(
     contract = "rwa_security_nft",
     name = "isPaused",
     parameter = "PauseParams<TokenId>",
+    return_value = "IsPausedResponse",
     error = "super::error::Error"
 )]
 pub fn is_paused(ctx: &ReceiveContext, host: &Host<State>) -> ContractResult<IsPausedResponse> {

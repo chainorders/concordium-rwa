@@ -5,80 +5,430 @@ use quote::{format_ident, quote};
 
 use crate::contracts::Contract;
 
-pub fn generated_contract_client_ui_types(contract: Contract) -> TokenStream {
+pub fn generated_contract_ui_types(contract: Contract) -> TokenStream {
+    let contract_name = format_ident!("{}", contract.name.to_case(Case::Camel));
     let mut methods = Vec::<TokenStream>::new();
+    let mut entrypoints = Vec::<TokenStream>::new();
 
-    for method in contract.receive_methods {
-        let method_name_str = method.name;
-        let method_title = method_name_str.to_case(Case::Title);
-        let request_json_schema_type_name =
-            format_ident!("{}RequestJsonSchema", method_name_str.to_case(Case::Camel));
-        let request_json_schema_code: TokenStream =
-            get_method_request_json_schema_code(method.request.as_ref(), &format!("{} Request", method_title));
+    let init_code = {
+        //Init Method
+        let method_name = format_ident!("init");
+        let method_name_str = method_name.to_string();
+        let method_type_name = method_name_str;
+        let method_var_name = format_ident!("init");
 
-        let response_json_schema_code: TokenStream =
-            get_method_response_json_schema_code(method.response.as_ref(), &format!("{} Response", method_title));
-        let request_ui_type_name =
-            format_ident!("{}RequestUi", method_name_str.to_case(Case::Camel));
-        let request_ui_code: TokenStream = get_method_request_ui_code(method.request.as_ref());
-        // let request_parser_fn_name =
-        //     format_ident!("{}RequestParser", method_name_str.to_case(Case::Camel));
-        // let request_parser_code: TokenStream =
-        // get_method_request_parser_code(method.request, request_ui_type_name);
+        let request_json_schema_type_name = format_ident!("{}RequestJsonSchema", method_var_name);
+        let request_ui_type_name = format_ident!("{}RequestUi", method_type_name);
+        let request_ui_code = contract.init_method.request.as_ref().map(|t| get_ui_code(&t));
+        let request_json_schema_code = contract
+            .init_method
+            .request
+            .as_ref()
+            .map(|t| get_json_schema_code(t, &format!("{} Request", method_type_name)));
+        if request_ui_code.is_some() {
+            methods.push(quote! {
+                export const #request_json_schema_type_name: RJSFSchema = #request_json_schema_code;
+                export type #request_ui_type_name = #request_ui_code;
+            });
+        }
 
-        let response_json_schema_type_name =
-            format_ident!("{}ResponseJsonSchema", method_name_str.to_case(Case::Camel));
-        let response_ui_type_name =
-            format_ident!("{}ResponseUi", method_name_str.to_case(Case::Camel));
-        let response_ui_code: TokenStream = get_method_response_ui_code(method.response.as_ref());
-        // let response_parser_fn_name =
-        //     format_ident!("{}ResponseParser", method_name_str.to_case(Case::Camel));
-        // let response_parser_code: TokenStream =
-        // get_method_response_parser_code(method.response);
+        let error_json_schema_type_name = format_ident!("{}ErrorJsonSchema", method_var_name);
+        let error_ui_type_name = format_ident!("{}ErrorUi", method_type_name);
+        let error_ui_code = contract.init_method.error.as_ref().map(|t| get_ui_code(&t));
+        let error_json_schema_code = contract
+            .init_method
+            .error
+            .as_ref()
+            .map(|t| get_json_schema_code(t, &format!("{} Error", method_type_name)));
+        if error_ui_code.is_some() {
+            methods.push(quote! {
+                export const #error_json_schema_type_name: RJSFSchema = #error_json_schema_code;
+                export type #error_ui_type_name = #error_ui_code;
+            });
+        }
 
-        let method_code = quote! {
-            export const #request_json_schema_type_name: RJSFSchema = #request_json_schema_code;
-            export const #response_json_schema_type_name: RJSFSchema = #response_json_schema_code;
-            export type #request_ui_type_name = #request_ui_code;
-            export type #response_ui_type_name = #response_ui_code;
+        let entrypoint_code = {
+            let request_type_name = request_ui_code
+                .as_ref()
+                .map(|_| format_ident!("{}Request", method_type_name))
+                .unwrap_or(format_ident!("never"));
+            let request_schema_base64_type_name = request_ui_code
+                .is_some()
+                .then(|| format_ident!("{}RequestSchemaBase64", method_var_name))
+                .unwrap_or(format_ident!("undefined"));
+            /* let error_type_name = error_ui_code
+            .as_ref()
+            .map(|_| format_ident!("{}Error", method_type_name))
+            .unwrap_or(format_ident!("never")); */
+            /*           let error_schema_base64_type_name = error_ui_code
+            .is_some()
+            .then(|| format_ident!("{}ErrorSchemaBase64", method_var_name))
+            .unwrap_or(format_ident!("undefined")); */
+
+            match request_ui_code.is_some() {
+                true => {
+                    quote! {(props: { onInitialize: (contract: ContractAddress.Type) => void }) =>
+                            GenericInit<
+                                types.#request_type_name,
+                                #request_ui_type_name,
+                            >({
+                                onContractInitialized: props.onInitialize,
+                                method: client.#method_name,
+                                requestJsonSchema: #request_json_schema_type_name,
+                                requestSchemaBase64: types.#request_schema_base64_type_name,
+                            })
+                    }
+                }
+                false => quote! {
+                    (props: { onInitialize: (contract: ContractAddress.Type) => void }) =>
+                        GenericInit<
+                            never,
+                            never,
+                        >({
+                            onContractInitialized: props.onInitialize,
+                            method: client.#method_name,
+                        })
+                },
+            }
         };
 
-        methods.push(method_code);
-    }
+        quote! {
+            export const #method_name = #entrypoint_code;
+        }
+    };
 
+    for method in contract.receive_methods {
+        let method_name = format_ident!("{}", method.name);
+        let method_name_str = method.name.to_owned();
+        let method_type_name = method_name_str.to_case(Case::Pascal);
+        let method_var_name = format_ident!("{}", method.name.to_case(Case::Camel));
+
+        let request_json_schema_type_name = format_ident!("{}RequestJsonSchema", method_var_name);
+        let request_ui_type_name = format_ident!("{}RequestUi", method_type_name);
+        let request_ui_code = method.request.as_ref().map(|t| get_ui_code(&t));
+        let request_json_schema_code = method
+            .request
+            .as_ref()
+            .map(|t| get_json_schema_code(t, &format!("{} Request", method_type_name)));
+        if request_ui_code.is_some() {
+            methods.push(quote! {
+                export const #request_json_schema_type_name: RJSFSchema = #request_json_schema_code;
+                export type #request_ui_type_name = #request_ui_code;
+            });
+        }
+
+        let response_json_schema_type_name = format_ident!("{}ResponseJsonSchema", method_var_name);
+        let response_ui_type_name = format_ident!("{}ResponseUi", method_type_name);
+        let response_ui_code = method.response.as_ref().map(|t| get_ui_code(&t));
+        let response_json_schema_code = method
+            .response
+            .as_ref()
+            .map(|t| get_json_schema_code(t, &format!("{} Response", method_type_name)));
+        if response_ui_code.is_some() {
+            methods.push(quote! {
+                export const #response_json_schema_type_name: RJSFSchema = #response_json_schema_code;
+                export type #response_ui_type_name = #response_ui_code;
+            });
+        }
+
+        let error_json_schema_type_name = format_ident!("{}ErrorJsonSchema", method_var_name);
+        let error_ui_type_name = format_ident!("{}ErrorUi", method_type_name);
+        let error_ui_code = method.error.as_ref().map(|t| get_ui_code(&t));
+        let error_json_schema_code = method
+            .error
+            .as_ref()
+            .map(|t| get_json_schema_code(t, &format!("{} Error", method_type_name)));
+        if error_ui_code.is_some() {
+            methods.push(quote! {
+                export const #error_json_schema_type_name: RJSFSchema = #error_json_schema_code;
+                export type #error_ui_type_name = #error_ui_code;
+            });
+        }
+
+        let entrypoint_code = {
+            let request_type_name = request_ui_code
+                .as_ref()
+                .map(|_| format_ident!("{}Request", method_type_name))
+                .unwrap_or(format_ident!("never"));
+            let request_schema_base64_type_name = request_ui_code
+                .is_some()
+                .then(|| format_ident!("{}RequestSchemaBase64", method_var_name))
+                .unwrap_or(format_ident!("undefined"));
+            let response_type_name = response_ui_code
+                .as_ref()
+                .map(|_| format_ident!("{}Response", method_type_name))
+                .unwrap_or(format_ident!("never"));
+            let response_schema_base64_type_name = response_ui_code
+                .is_some()
+                .then(|| format_ident!("{}ResponseSchemaBase64", method_var_name))
+                .unwrap_or(format_ident!("undefined"));
+            let error_type_name = error_ui_code
+                .as_ref()
+                .map(|_| format_ident!("{}Error", method_type_name))
+                .unwrap_or(format_ident!("never"));
+            let error_schema_base64_type_name = error_ui_code
+                .is_some()
+                .then(|| format_ident!("{}ErrorSchemaBase64", method_var_name))
+                .unwrap_or(format_ident!("undefined"));
+
+            if method.is_mutable {
+                match (request_ui_code.is_some(), error_ui_code.is_some()) {
+                    (true, true) => quote! {
+                            (props: { contract: ContractAddress.Type }) =>
+                            GenericUpdate<
+                                types.#request_type_name,
+                                #request_ui_type_name,
+                                types.#error_type_name,
+                                #error_ui_type_name
+                            >({
+                                contract: props.contract,
+                                method: client.#method_name,
+                                requestJsonSchema: #request_json_schema_type_name,
+                                requestSchemaBase64: types.#request_schema_base64_type_name,
+                                errorJsonSchema: #error_json_schema_type_name,
+                                errorSchemaBase64: types.#error_schema_base64_type_name,
+                            })
+                    },
+                    (true, false) => quote! {
+                            (props: { contract: ContractAddress.Type }) =>
+                            GenericUpdate<
+                                types.#request_type_name,
+                                #request_ui_type_name,
+                                never,
+                                never
+                            >({
+                                contract: props.contract,
+                                method: client.#method_name,
+                                requestJsonSchema: #request_json_schema_type_name,
+                                requestSchemaBase64: types.#request_schema_base64_type_name,
+                            })
+                    },
+                    (false, true) => quote! {
+                            (props: { contract: ContractAddress.Type }) =>
+                            GenericUpdate<
+                                never,
+                                never,
+                                types.#error_type_name,
+                                #error_ui_type_name
+                            >({
+                                contract: props.contract,
+                                method: client.#method_name,
+                                errorJsonSchema: #error_json_schema_type_name,
+                                errorSchemaBase64: types.#error_schema_base64_type_name,
+                            })
+                    },
+                    (false, false) => quote! {
+                            (props: { contract: ContractAddress.Type }) =>
+                            GenericUpdate<
+                                never,
+                                never,
+                                never,
+                                never
+                            >({
+                                contract: props.contract,
+                                method: client.#method_name,
+                            })
+                    },
+                }
+            } else {
+                match (
+                    request_ui_code.is_some(),
+                    response_ui_code.is_some(),
+                    error_ui_code.is_some(),
+                ) {
+                    (true, true, true) => quote! {
+                            (props: { contract: ContractAddress.Type }) =>
+                            GenericInvoke<
+                                types.#request_type_name,
+                                #request_ui_type_name,
+                                types.#response_type_name,
+                                #response_ui_type_name,
+                                types.#error_type_name,
+                                #error_ui_type_name
+                            >({
+                                contract: props.contract,
+                                method: client.#method_name,
+                                requestJsonSchema: #request_json_schema_type_name,
+                                requestSchemaBase64: types.#request_schema_base64_type_name,
+                                responseJsonSchema: #response_json_schema_type_name,
+                                responseSchemaBase64: types.#response_schema_base64_type_name,
+                                errorJsonSchema: #error_json_schema_type_name,
+                                errorSchemaBase64: types.#error_schema_base64_type_name,
+                            })
+                    },
+                    (true, true, false) => quote! {
+                            (props: { contract: ContractAddress.Type }) =>
+                            GenericInvoke<
+                                types.#request_type_name,
+                                #request_ui_type_name,
+                                types.#response_type_name,
+                                #response_ui_type_name,
+                                never,
+                                never
+                            >({
+                                contract: props.contract,
+                                method: client.#method_name,
+                                requestJsonSchema: #request_json_schema_type_name,
+                                requestSchemaBase64: types.#request_schema_base64_type_name,
+                                responseJsonSchema: #response_json_schema_type_name,
+                                responseSchemaBase64: types.#response_schema_base64_type_name,
+                            })
+                    },
+                    (true, false, true) => quote! {
+                            (props: { contract: ContractAddress.Type }) =>
+                            GenericInvoke<
+                                types.#request_type_name,
+                                #request_ui_type_name,
+                                never,
+                                never,
+                                types.#error_type_name,
+                                #error_ui_type_name
+                            >({
+                                contract: props.contract,
+                                method: client.#method_name,
+                                requestJsonSchema: #request_json_schema_type_name,
+                                requestSchemaBase64: types.#request_schema_base64_type_name,
+                                errorJsonSchema: #error_json_schema_type_name,
+                                errorSchemaBase64: types.#error_schema_base64_type_name,
+                            })
+                    },
+                    (true, false, false) => quote! {
+                            (props: { contract: ContractAddress.Type }) =>
+                            GenericInvoke<
+                                types.#request_type_name,
+                                #request_ui_type_name,
+                                never,
+                                never,
+                                never,
+                                never
+                            >({
+                                contract: props.contract,
+                                method: client.#method_name,
+                                requestJsonSchema: #request_json_schema_type_name,
+                                requestSchemaBase64: types.#request_schema_base64_type_name,
+                            })
+                    },
+                    (false, true, true) => quote! {
+                            (props: { contract: ContractAddress.Type }) =>
+                            GenericInvoke<
+                                never,
+                                never,
+                                types.#response_type_name,
+                                #response_ui_type_name,
+                                types.#error_type_name,
+                                #error_ui_type_name
+                            >({
+                                contract: props.contract,
+                                method: client.#method_name,
+                                responseJsonSchema: #response_json_schema_type_name,
+                                responseSchemaBase64: types.#response_schema_base64_type_name,
+                                errorJsonSchema: #error_json_schema_type_name,
+                                errorSchemaBase64: types.#error_schema_base64_type_name,
+                            })
+                    },
+                    (false, true, false) => quote! {
+                            (props: { contract: ContractAddress.Type }) =>
+                            GenericInvoke<
+                                never,
+                                never,
+                                types.#response_type_name,
+                                #response_ui_type_name,
+                                never,
+                                never
+                            >({
+                                contract: props.contract,
+                                method: client.#method_name,
+                                responseJsonSchema: #response_json_schema_type_name,
+                                responseSchemaBase64: types.#response_schema_base64_type_name,
+                            })
+                    },
+                    (false, false, true) => quote! {
+                            (props: { contract: ContractAddress.Type }) =>
+                            GenericInvoke<
+                                never,
+                                never,
+                                never,
+                                never,
+                                types.#error_type_name,
+                                #error_ui_type_name
+                            >({
+                                contract: props.contract,
+                                method: client.#method_name,
+                                errorJsonSchema: #error_json_schema_type_name,
+                                errorSchemaBase64: types.#error_schema_base64_type_name,
+                            })
+                    },
+                    (false, false, false) => quote! {
+                            (props: { contract: ContractAddress.Type }) =>
+                            GenericInvoke<
+                                never,
+                                never,
+                                never,
+                                never,
+                                never,
+                                never
+                            >({
+                                contract: props.contract,
+                                method: client.#method_name,
+                            })
+                    },
+                }
+            }
+        };
+
+        entrypoints.push(quote! {
+            #method_name: #entrypoint_code,
+        });
+    }
+    let entrypoints = quote! {
+        export const ENTRYPOINTS_UI: {
+            [key: keyof typeof types.ENTRYPOINTS]: (props: { contract: ContractAddress.Type }) => React.JSX.Element;
+        } = {
+            #(#entrypoints)*
+        };
+    };
+
+    let client_file = format!("./{}", contract_name);
     return quote! {
         import { RJSFSchema } from "@rjsf/utils";
+        import React from "react";
+        import { ContractAddress } from "@concordium/web-sdk";
+        import { default as client } from #client_file;
+        import * as types from #client_file;
+        import { GenericInit, GenericInvoke, GenericUpdate } from "./GenericContractUI";
         #(#methods)*
+        #init_code
+        #entrypoints
     };
 }
 
-fn get_method_response_ui_code(response: Option<&Type>) -> TokenStream {
-    match response {
-        Some(response) => get_ui_code(response),
-        None => quote! {never},
-    }
-}
+// fn get_method_response_ui_code(response: Option<&Type>) -> TokenStream {
+//     match response {
+//         Some(response) => get_ui_code(response),
+//         None => quote! {never},
+//     }
+// }
 
-fn get_method_request_ui_code(request: Option<&Type>) -> TokenStream {
-    match request {
-        Some(request) => get_ui_code(request),
-        None => quote! {never},
-    }
-}
+// fn get_method_request_ui_code(request: Option<&Type>) -> TokenStream {
+//     match request {
+//         Some(request) => get_ui_code(request),
+//         None => quote! {never},
+//     }
+// }
 
-fn get_method_response_json_schema_code(response: Option<&Type>, title: &String) -> TokenStream {
-    match response {
-        Some(response) => get_json_schema_code(response, title),
-        None => quote! {{}},
-    }
-}
+// fn get_method_response_json_schema_code(response: Option<&Type>, title:
+// &String) -> TokenStream {     match response {
+//         Some(response) => get_json_schema_code(response, title),
+//         None => quote! {{}},
+//     }
+// }
 
-fn get_method_request_json_schema_code(request: Option<&Type>, title: &String) -> TokenStream {
-    match request {
-        Some(request) => get_json_schema_code(request, title),
-        None => quote! {{}},
-    }
-}
+// fn get_method_request_json_schema_code(request: Option<&Type>, title:
+// &String) -> TokenStream {     match request {
+//         Some(request) => get_json_schema_code(request, title),
+//         None => quote! {{}},
+//     }
+// }
 
 fn get_json_schema_code(request: &Type, title: &String) -> TokenStream {
     match request {
@@ -91,7 +441,9 @@ fn get_json_schema_code(request: &Type, title: &String) -> TokenStream {
         Type::U128 => quote! {{type: "integer", minimum: 0, title: #title}},
         Type::I8 => quote! {{type: "integer", minimum: -128, maximum: 127, title: #title}},
         Type::I16 => quote! {{type: "integer", minimum: -32768, maximum: 32767, title: #title}},
-        Type::I32 => quote! {{type: "integer", minimum: -2147483648, maximum: 2147483647, title: #title}},
+        Type::I32 => {
+            quote! {{type: "integer", minimum: -2147483648, maximum: 2147483647, title: #title}}
+        }
         Type::I64 => quote! {{type: "integer", title: #title}},
         Type::I128 => quote! {{type: "integer", title: #title}},
         Type::Amount => quote! {{type: "string", title: #title}},
@@ -138,7 +490,8 @@ fn get_json_schema_code(request: &Type, title: &String) -> TokenStream {
             let one_ofs = e.iter().map(|(k, v)| {
                 let k_property_name = format_ident!("{}", k);
                 let k_property_display_name = k.to_case(Case::Title);
-                let k_property_code = get_fields_json_schema(v, &format!("{} {}", title, k_property_display_name));
+                let k_property_code =
+                    get_fields_json_schema(v, &format!("{} {}", title, k_property_display_name));
                 quote! {
                     {
                         properties: {

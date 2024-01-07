@@ -31,7 +31,7 @@ export function reducer(state: AppState, action: Action): AppState {
 	switch (action.type) {
 		case ActionTypes.AddContract:
 			{
-				if (state.contracts.find((contract) => contract.address === action.contract.address)) {
+				if (state.contracts.find((contract) => contract.address.index === action.contract.address.index)) {
 					return state;
 				}
 

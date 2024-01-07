@@ -1,6 +1,7 @@
 import {
 	BlockItemSummaryInBlock,
 	ContractAddress,
+	RejectReasonTag,
 	TransactionKindString,
 	TransactionSummaryType,
 } from "@concordium/web-sdk";
@@ -11,6 +12,15 @@ export function parseContractAddress(outcome: BlockItemSummaryInBlock): Contract
 			switch (outcome.summary.transactionType) {
 				case TransactionKindString.InitContract:
 					return outcome.summary.contractInitialized.address;
+				case TransactionKindString.Failed: {
+					switch (outcome.summary.rejectReason.tag) {
+						case RejectReasonTag.RejectedInit: {
+							throw new Error(`Rejected init: ${outcome.summary.rejectReason.rejectReason}`);
+						}
+						default:
+							throw new Error(`Unknown reject reason ${outcome.summary.rejectReason.tag}`);
+					}
+				}
 				default:
 					throw new Error(`Unknown account transaction type: ${outcome.summary.transactionType}`);
 			}
@@ -21,4 +31,9 @@ export function parseContractAddress(outcome: BlockItemSummaryInBlock): Contract
 
 export function contractAddToString(contractAddress: ContractAddress.Type): string {
 	return `${contractAddress.index.toString()}/${contractAddress.subindex.toString()}`;
+}
+
+export type ParsedError<TErr> = {
+	message: string;
+	error?: TErr;
 }

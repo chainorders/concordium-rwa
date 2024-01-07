@@ -1,6 +1,10 @@
 use concordium_std::*;
 
-use concordium_rwa_utils::{agents_state::IsAgentsState, clients::contract_client::IContractState};
+use concordium_rwa_utils::{
+    agents_state::IsAgentsState,
+    clients::contract_client::IContractState,
+    common_types::{IdentityAttribute, IdentityCredential},
+};
 
 use super::types::{AttributeTag, AttributeValue, Identity, Issuer};
 pub type CredentialId = PublicKeyEd25519;
@@ -23,8 +27,22 @@ impl<S: HasStateApi> IdentityState<S> {
     /// `IdentityState`.
     pub fn to_identity(&self) -> Identity {
         Identity {
-            attributes:  self.attributes.iter().map(|i| (*i.0, i.1.to_owned())).collect(),
-            credentials: self.credentials.iter().map(|i| (*i.0, *i.1)).collect(),
+            attributes:  self
+                .attributes
+                .iter()
+                .map(|i| IdentityAttribute {
+                    tag:   *i.0,
+                    value: i.1.clone(),
+                })
+                .collect(),
+            credentials: self
+                .credentials
+                .iter()
+                .map(|i| IdentityCredential {
+                    issuer: *i.0,
+                    key:    *i.1,
+                })
+                .collect(),
         }
     }
 
@@ -82,11 +100,19 @@ impl<S: HasStateApi> IdentityState<S> {
             credentials: state_builder.new_map(),
         };
 
-        for (tag, value) in identity.attributes {
+        for IdentityAttribute {
+            tag,
+            value,
+        } in identity.attributes
+        {
             ret.attributes.insert(tag, value);
         }
 
-        for (issuer, key) in identity.credentials {
+        for IdentityCredential {
+            issuer,
+            key,
+        } in identity.credentials
+        {
             ret.credentials.insert(issuer, key);
         }
 

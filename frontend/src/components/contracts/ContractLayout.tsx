@@ -6,6 +6,7 @@ import concordiumNodeClient from "../../lib/ConcordiumNodeClient";
 import { ContractAddress, InstanceInfo } from "@concordium/web-sdk";
 import CCDScanModuleLink from "../common/concordium/CCDScanModuleLink";
 import CCDScanContractLink from "../common/concordium/CCDScanContractLink";
+import { capitalCase } from "change-case";
 
 export default function ContractLayout(props: { contracts: Contract[] }) {
 	const { index, subIndex } = useParams();
@@ -42,7 +43,7 @@ export default function ContractLayout(props: { contracts: Contract[] }) {
 			<Stack>
 				<Paper variant="outlined">
 					<Typography variant="h2" fontSize={24}>
-						{contract.type}
+						{capitalCase(contract.type)}
 					</Typography>
 					<Typography variant="h3" fontSize={20}>
 						<CCDScanContractLink

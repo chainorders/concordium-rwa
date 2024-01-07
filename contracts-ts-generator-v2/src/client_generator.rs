@@ -1,4 +1,5 @@
 use base64::{engine::general_purpose, Engine as _};
+use concordium_rwa_compliance::compliance::error;
 use concordium_std::{
     schema::{Fields, Type},
     Cursor, Serial,
@@ -107,8 +108,8 @@ fn get_schema_string(ty: &Type) -> String {
     general_purpose::STANDARD.encode(&ty_bytes)
 }
 
-pub fn generated_contract_client_ts_types(contract: Contract) -> TokenStream {
-    let contract_name = format_ident!("{}", contract.name.to_case(Case::Pascal));
+pub fn generated_contract_client(contract: Contract) -> TokenStream {
+    let contract_name = format_ident!("{}", contract.name.to_case(Case::Camel));
     let contract_name_string = contract.name.to_owned();
     let mut method_types = Vec::<TokenStream>::new();
     let mut methods = Vec::<TokenStream>::new();
@@ -119,29 +120,45 @@ pub fn generated_contract_client_ts_types(contract: Contract) -> TokenStream {
         let method = contract.init_method;
         let module_reference_string = method.module_reference.to_string().to_owned();
         let method_name = format_ident!("{}", "init");
-        let method_type_name = format_ident!("{}", "Init");
+        let method_type_name = format_ident!("{}", "init");
+        let method_var_name = format_ident!("{}", "init".to_case(Case::Camel));
 
-        let request = method.request.as_ref().map(get_ts_type);
+        let request_type_code = method.request.as_ref().map(get_ts_type);
         let request_schema = method.request.map(|ty| get_schema_string(&ty));
 
-        let name_request = format_ident!("{}Request", method_type_name);
-        let name_request_schema = format_ident!("{}RequestSchema", method_type_name);
+        let error_type_code = method.error.as_ref().map(get_ts_type);
+        let error_schema = method.error.map(|ty| get_schema_string(&ty));
 
-        match request.is_some() {
-            true => {
-                method_types.push(quote! {
-                    export type #name_request = #request;
-                    export const #name_request_schema = #request_schema;
-                });
+        let name_request = format_ident!("{}Request", method_var_name);
+        let name_request_schema = format_ident!("{}RequestSchemaBase64", method_type_name);
+        // let name_error = format_ident!("{}Error", method_var_name);
+        let name_error_schema = format_ident!("{}ErrorSchemaBase64", method_type_name);
+
+        if request_type_code.is_some() {
+            method_types.push(quote! {
+                export type #name_request = #request_type_code;
+                export const #name_request_schema = #request_schema;
+            });
+        }
+
+        if error_type_code.is_some() {
+            method_types.push(quote! {
+                // export type #name_error = #error_type_code;
+                export const #name_error_schema = #error_schema;
+            });
+        }
+
+        match (request_type_code.is_some()) {
+            (true) => {
                 methods.push(quote! {
                     #method_name: new InitMethod<#name_request>(
                         ModuleReference.fromHexString(#module_reference_string),
                         ContractName.fromString(#contract_name_string),
                         #name_request_schema
                     ),
-                })
+                });
             }
-            false => methods.push(quote! {
+            (false) => methods.push(quote! {
                 #method_name: new InitMethod<void>(
                     ModuleReference.fromHexString(#module_reference_string),
                     ContractName.fromString(#contract_name_string),
@@ -154,16 +171,25 @@ pub fn generated_contract_client_ts_types(contract: Contract) -> TokenStream {
         let method_name = format_ident!("{}", method.name);
         let method_name_string = method.name.to_owned();
         let method_type_name = format_ident!("{}", method.name.to_case(Case::Pascal));
+        let method_var_name = format_ident!("{}", method.name.to_case(Case::Camel));
 
-        let request = method.request.as_ref().map(get_ts_type);
+        let request_type_code = method.request.as_ref().map(get_ts_type);
         let request_schema = method.request.map(|ty| get_schema_string(&ty));
-        let response = method.response.as_ref().map(get_ts_type);
+
+        let response_type_code = method.response.as_ref().map(get_ts_type);
         let response_schema = method.response.map(|ty| get_schema_string(&ty));
 
+        let error_type_code = method.error.as_ref().map(get_ts_type);
+        let error_schema = method.error.map(|ty| get_schema_string(&ty));
+
         let name_request = format_ident!("{}Request", method_type_name);
-        let name_request_schema = format_ident!("{}RequestSchema", method_type_name);
+        let name_request_schema = format_ident!("{}RequestSchemaBase64", method_var_name);
+
         let name_response = format_ident!("{}Response", method_type_name);
-        let name_response_schema = format_ident!("{}ResponseSchema", method_type_name);
+        let name_response_schema = format_ident!("{}ResponseSchemaBase64", method_var_name);
+
+        let name_error = format_ident!("{}Error", method_type_name);
+        let name_error_schema = format_ident!("{}ErrorSchemaBase64", method_var_name);
 
         entrypoints.push(quote! {
             #method_name: EntrypointName.fromString(#method_name_string),
@@ -173,95 +199,135 @@ pub fn generated_contract_client_ts_types(contract: Contract) -> TokenStream {
         entrypoint_display_names.push(quote! {
             #method_name: #method_display_name,
         });
-        match (request.is_some(), response.is_some()) {
-            (true, true) => {
-                method_types.push(quote! {
-                    export type #name_request = #request;
-                    export const #name_request_schema = #request_schema;
-                    export type #name_response = #response;
-                    export const #name_response_schema = #response_schema;
-                });
-                methods.push(quote! {
-                    #method_name: new ReceiveMethod<#name_request, #name_response>(
-                        ContractName.fromString(#contract_name_string),
-                        EntrypointName.fromString(#method_name_string),
-                        #name_request_schema,
-                        #name_response_schema,
-                    ),
-                })
-            }
-            (true, false) => {
-                method_types.push(quote! {
-                    export type #name_request = #request;
-                    export const #name_request_schema = #request_schema;
-                });
-                methods.push(quote! {
-                    #method_name: new ReceiveMethod<#name_request, void>(
-                        ContractName.fromString(#contract_name_string),
-                        EntrypointName.fromString(#method_name_string),
-                        #name_request_schema
-                    ),
-                })
-            }
-            (false, true) => {
-                method_types.push(quote! {
-                    export type #name_response = #response;
-                    export const #name_response_schema = #response_schema;
-                });
-                methods.push(quote! {
-                    #method_name: new ReceiveMethod<void, #name_response>(
-                        ContractName.fromString(#contract_name_string),
-                        EntrypointName.fromString(#method_name_string),
-                        undefined,
-                        #name_response_schema
-                    ),
-                })
-            }
-            (false, false) => methods.push(quote! {
+
+        if error_type_code.is_some() {
+            method_types.push(quote! {
+                export type #name_error = #error_type_code;
+                export const #name_error_schema = #error_schema;
+            });
+        }
+
+        if request_type_code.is_some() {
+            method_types.push(quote! {
+                export type #name_request = #request_type_code;
+                export const #name_request_schema = #request_schema;
+            });
+        }
+
+        if response_type_code.is_some() {
+            method_types.push(quote! {
+                export type #name_response = #response_type_code;
+                export const #name_response_schema = #response_schema;
+            });
+        }
+
+        match (request_type_code.is_some(), response_type_code.is_some(), error_type_code.is_some())
+        {
+            (true, true, true) => methods.push(quote! {
+                #method_name: new ReceiveMethod<#name_request, #name_response, #name_error>(
+                    ContractName.fromString(#contract_name_string),
+                    EntrypointName.fromString(#method_name_string),
+                    #name_request_schema,
+                    #name_response_schema,
+                    #name_error_schema
+                ),
+            }),
+            (true, true, false) => methods.push(quote! {
+                #method_name: new ReceiveMethod<#name_request, #name_response>(
+                    ContractName.fromString(#contract_name_string),
+                    EntrypointName.fromString(#method_name_string),
+                    #name_request_schema,
+                    #name_response_schema,
+                ),
+            }),
+            (true, false, false) => methods.push(quote! {
+                #method_name: new ReceiveMethod<#name_request>(
+                    ContractName.fromString(#contract_name_string),
+                    EntrypointName.fromString(#method_name_string),
+                    #name_request_schema
+                ),
+            }),
+            (true, false, true) => methods.push(quote! {
+                #method_name: new ReceiveMethod<#name_request, never, #name_error>(
+                    ContractName.fromString(#contract_name_string),
+                    EntrypointName.fromString(#method_name_string),
+                    #name_request_schema,
+                    undefined,
+                    #name_error_schema
+                ),
+            }),
+            (false, true, false) => methods.push(quote! {
+                #method_name: new ReceiveMethod<void, #name_response>(
+                    ContractName.fromString(#contract_name_string),
+                    EntrypointName.fromString(#method_name_string),
+                    undefined,
+                    #name_response_schema
+                ),
+            }),
+            (false, true, true) => methods.push(quote! {
+                #method_name: new ReceiveMethod<never, #name_response, #name_error>(
+                    ContractName.fromString(#contract_name_string),
+                    EntrypointName.fromString(#method_name_string),
+                    undefined,
+                    #name_response_schema,
+                    #name_error_schema
+                ),
+            }),
+            (false, false, false) => methods.push(quote! {
                 #method_name: new ReceiveMethod<void, void>(
                     ContractName.fromString(#contract_name_string),
                     EntrypointName.fromString(#method_name_string)
                 ),
             }),
+            (false, false, true) => methods.push(quote! {
+                #method_name: new ReceiveMethod<never, never, #name_error>(
+                    ContractName.fromString(#contract_name_string),
+                    EntrypointName.fromString(#method_name_string),
+                    undefined,
+                    undefined,
+                    #name_error_schema
+                ),
+            }),
         }
     }
 
-    let entrypoint_type = quote! {
+    let entrypoints = quote! {
         export const ENTRYPOINTS: Record<string, EntrypointName.Type> = {
             #(#entrypoints)*
         };
     };
-    let entrypoint_display_name = quote! {
+    let entrypoint_display_names = quote! {
         export const ENTRYPOINT_DISPLAY_NAMES: Record<string, string> = {
             #(#entrypoint_display_names)*
         };
     };
     let event_type = contract.event_type.to_owned().map(|ty| get_ts_type(&ty));
     let event_schema = contract.event_type.map(|ty| get_schema_string(&ty));
-    let name_event = format_ident!("{}Event", contract_name);
-    let name_event_schema = format_ident!("{}EventSchema", contract_name);
+    let name_event = format_ident!("{}", "Event".to_case(Case::Camel));
+    let name_event_schema = format_ident!("{}", "EventSchemaBase64".to_case(Case::Camel));
 
     if event_type.is_some() {
         method_types.push(quote! {
             export type #name_event = #event_type;
             export const #name_event_schema = #event_schema;
-            export const deserializeEvent = (event: ContractEvent.Type): #name_event => {
-                return ContractEvent.parseWithSchemaTypeBase64(event, #name_event_schema) as #name_event;
-            };
         });
     }
     let contract_client = quote! {
         export const #contract_name = {
             #(#methods)*
+            deserializeEvent: (event: ContractEvent.Type): #name_event => {
+                return ContractEvent.parseWithSchemaTypeBase64(event, #name_event_schema) as #name_event;
+            }
         }
     };
 
     quote! {
         import { ContractEvent, ContractName, EntrypointName, ModuleReference } from "@concordium/web-sdk";
         import { InitMethod, ReceiveMethod } from "./GenericContract";
+        export const CONTRACT_NAME = #contract_name_string;
         #(#method_types)*
-        #entrypoint_type;
-        #entrypoint_display_name;
+        #entrypoints;
+        #entrypoint_display_names;
         #contract_client;
         export default #contract_name;
     }

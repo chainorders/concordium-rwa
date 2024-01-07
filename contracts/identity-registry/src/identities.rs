@@ -14,43 +14,33 @@ pub struct RegisterIdentityParams {
     pub address:  Address,
 }
 
-/// Parameters for registering multiple identities.
-#[derive(Serialize, SchemaType)]
-pub struct RegisterIdentitiesParams {
-    pub identities: Vec<RegisterIdentityParams>,
-}
-
-/// Register multiple identities.
+/// Register Identity.
 #[receive(
     contract = "rwa_identity_registry",
-    name = "registerIdentities",
+    name = "registerIdentity",
     mutable,
     enable_logger,
-    parameter = "RegisterIdentitiesParams",
+    parameter = "RegisterIdentityParams",
     error = "super::error::Error"
 )]
-pub fn register_identities(
+pub fn register_identity(
     ctx: &ReceiveContext,
     host: &mut Host<State>,
     logger: &mut Logger,
 ) -> ContractResult<()> {
     // Check if the sender is authorized to register identities.
     ensure!(host.state().agents.contains(&ctx.sender()), Error::Unauthorized);
-
-    let params: RegisterIdentitiesParams = ctx.parameter_cursor().get()?;
-    for RegisterIdentityParams {
+    let RegisterIdentityParams {
         identity,
         address,
-    } in params.identities
-    {
-        let (state, state_builder) = host.state_and_builder();
+    }: RegisterIdentityParams = ctx.parameter_cursor().get()?;
+    let (state, state_builder) = host.state_and_builder();
 
-        // Register the identity and log the event.
-        state.identities.insert(address, IdentityState::new(identity, state_builder));
-        logger.log(&Event::IdentityRegistered(IdentityUpdatedEvent {
-            address,
-        }))?;
-    }
+    // Register the identity and log the event.
+    state.identities.insert(address, IdentityState::new(identity, state_builder));
+    logger.log(&Event::IdentityRegistered(IdentityUpdatedEvent {
+        address,
+    }))?;
 
     Ok(())
 }
@@ -58,13 +48,13 @@ pub fn register_identities(
 /// Update multiple identities.
 #[receive(
     contract = "rwa_identity_registry",
-    name = "updateIdentities",
+    name = "updateIdentity",
     mutable,
     enable_logger,
-    parameter = "RegisterIdentitiesParams",
+    parameter = "RegisterIdentityParams",
     error = "super::error::Error"
 )]
-pub fn update_identities(
+pub fn update_identity(
     ctx: &ReceiveContext,
     host: &mut Host<State>,
     logger: &mut Logger,
@@ -72,41 +62,32 @@ pub fn update_identities(
     // Check if the sender is authorized to update identities.
     ensure!(host.state().agents.contains(&ctx.sender()), Error::Unauthorized);
 
-    let params: RegisterIdentitiesParams = ctx.parameter_cursor().get()?;
-    for RegisterIdentityParams {
+    let RegisterIdentityParams {
         identity,
         address,
-    } in params.identities
-    {
-        let (state, state_builder) = host.state_and_builder();
-        ensure!(
-            state.identities.insert(address, IdentityState::new(identity, state_builder)).is_none(),
-            Error::IdentityNotFound
-        );
-        logger.log(&Event::IdentityUpdated(IdentityUpdatedEvent {
-            address,
-        }))?;
-    }
+    }: RegisterIdentityParams = ctx.parameter_cursor().get()?;
+    let (state, state_builder) = host.state_and_builder();
+    ensure!(
+        state.identities.insert(address, IdentityState::new(identity, state_builder)).is_none(),
+        Error::IdentityNotFound
+    );
+    logger.log(&Event::IdentityUpdated(IdentityUpdatedEvent {
+        address,
+    }))?;
 
     Ok(())
-}
-
-/// Parameters for deleting identities.
-#[derive(Serialize, SchemaType)]
-pub struct DeleteIdentitiesParams {
-    pub addresses: Vec<Address>,
 }
 
 /// Delete multiple identities.
 #[receive(
     contract = "rwa_identity_registry",
-    name = "deleteIdentities",
+    name = "deleteIdentity",
     mutable,
     enable_logger,
-    parameter = "DeleteIdentitiesParams",
+    parameter = "Address",
     error = "super::error::Error"
 )]
-pub fn delete_identities(
+pub fn delete_identity(
     ctx: &ReceiveContext,
     host: &mut Host<State>,
     logger: &mut Logger,
@@ -114,19 +95,17 @@ pub fn delete_identities(
     // Check if the sender is authorized to delete identities.
     ensure!(host.state().agents.contains(&ctx.sender()), Error::Unauthorized);
 
-    let params: DeleteIdentitiesParams = ctx.parameter_cursor().get()?;
-    for address in params.addresses {
-        let state = host.state_mut();
+    let address: Address = ctx.parameter_cursor().get()?;
+    let state = host.state_mut();
 
-        ensure!(
-            state.identities.remove_and_get(&address).map(|i| i.delete()).is_some(),
-            Error::IdentityNotFound
-        );
+    ensure!(
+        state.identities.remove_and_get(&address).map(|i| i.delete()).is_some(),
+        Error::IdentityNotFound
+    );
 
-        logger.log(&Event::IdentityRemoved(IdentityUpdatedEvent {
-            address,
-        }))?;
-    }
+    logger.log(&Event::IdentityRemoved(IdentityUpdatedEvent {
+        address,
+    }))?;
 
     Ok(())
 }

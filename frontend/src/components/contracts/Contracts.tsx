@@ -21,16 +21,16 @@ interface Props {
 function ContractLink(props: { contract: Contract }) {
 	const contractAddressString = `${props.contract.address.index.toString()}/${props.contract.address.subindex.toString()}`;
 	return (
-		<Link to={`${contractAddressString}/${props.contract.type}`}>
+		<Link to={`${props.contract.type}/${contractAddressString}`}>
 			{props.contract.name} ({contractAddressString})
 		</Link>
 	);
 }
 
 export default function Contracts(props: Props) {
-	const identityRegistries = props.contracts.filter((c) => c.type == ContractType.IdentityRegistry);
-	const complianceModules = props.contracts.filter((c) => c.type == ContractType.ComplianceModule);
-	const complianceContracts = props.contracts.filter((c) => c.type == ContractType.Compliance);
+	const identityRegistries = props.contracts.filter((c) => c.type == ContractType.RwaIdentityRegistry);
+	const complianceModules = props.contracts.filter((c) => c.type == ContractType.RwaComplianceModule);
+	const complianceContracts = props.contracts.filter((c) => c.type == ContractType.RwaCompliance);
 
 	return (
 		<Stack spacing={1}>
@@ -118,7 +118,7 @@ export default function Contracts(props: Props) {
 				</Typography>
 				<List>
 					{props.contracts
-						.filter((c) => c.type == ContractType.Nft)
+						.filter((c) => c.type == ContractType.RwaSecurityNft)
 						.map((contract) => {
 							return (
 								<ListItem

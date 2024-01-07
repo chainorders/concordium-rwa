@@ -1,14 +1,14 @@
-import { BlockItemSummaryInBlock } from "@concordium/web-sdk";
-import { useWallet } from "../../WalletProvider";
-import SendTransactionButton from "../../common/SendTransactionButton";
-import { Contract, ContractType } from "../ContractTypes";
+import { BlockItemSummaryInBlock, RejectedInit } from "@concordium/web-sdk";
+import { useWallet } from "../WalletProvider";
+import SendTransactionButton from "../common/SendTransactionButton";
+import { Contract, ContractType } from "./ContractTypes";
 import { Stack, TextField } from "@mui/material";
 import { useState } from "react";
-import { errorString, initialize } from "../../../lib/IdentityRegistryContract";
-import { parseContractAddress } from "../../../lib/common/common";
-import ErrorDisplay from "../../common/ErrorDisplay";
+import { parseContractAddress } from "../../lib/common/common";
+import ErrorDisplay from "../common/ErrorDisplay";
+import rwaIdentityRegistry from "../../lib/rwaIdentityRegistry";
 
-export default function Initialize(props: { onSuccess: (contract: Contract) => void }) {
+export default function RwaIdentityRegistryInitialize(props: { onSuccess: (contract: Contract) => void }) {
 	const wallet = useWallet();
 	const [form, setForm] = useState({
 		contractDisplayName: "",
@@ -21,7 +21,7 @@ export default function Initialize(props: { onSuccess: (contract: Contract) => v
 			props.onSuccess({
 				address,
 				name: form.contractDisplayName,
-				type: ContractType.IdentityRegistry,
+				type: ContractType.RwaIdentityRegistry,
 			});
 		} catch (error) {
 			setError(error instanceof Error ? error.message : "Unknown error");
@@ -51,9 +51,9 @@ export default function Initialize(props: { onSuccess: (contract: Contract) => v
 					onChange={(e) => setFormValue("contractDisplayName", e.target.value)}
 				/>
 				<SendTransactionButton
-					onClick={() => initialize(wallet.provider!, wallet.currentAccount!)}
+					onClick={() => rwaIdentityRegistry.init.init(wallet.provider!, wallet.currentAccount!)}
 					onFinalized={handleSuccess}
-					onFinalizedError={(r) => errorString(r)}
+					onFinalizedError={(r) => rwaIdentityRegistry.init.parseError(r as RejectedInit) || "Unknown Error"}
 					disabled={!isFormValid()}>
 					Initialize Identity Registry
 				</SendTransactionButton>

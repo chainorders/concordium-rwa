@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ComplianceModule } from "../../../lib/common/types";
-import { useWallet } from "../../WalletProvider";
+import { ComplianceModule } from "../../lib/common/types";
+import { useWallet } from "../WalletProvider";
 import {
 	Button,
 	IconButton,
@@ -13,17 +13,20 @@ import {
 	TextField,
 	Typography,
 } from "@mui/material";
-import ContractAddressField from "../../common/concordium/ContractAddressField";
-import SendTransactionButton from "../../common/SendTransactionButton";
-import { errorString, initialize } from "../../../lib/Compliance";
-import { Contract, ContractType } from "../ContractTypes";
-import ErrorDisplay from "../../common/ErrorDisplay";
-import CCDScanContractLink from "../../common/concordium/CCDScanContractLink";
+import ContractAddressField from "../common/concordium/ContractAddressField";
+import SendTransactionButton from "../common/SendTransactionButton";
+import { Contract, ContractType } from "./ContractTypes";
+import ErrorDisplay from "../common/ErrorDisplay";
+import CCDScanContractLink from "../common/concordium/CCDScanContractLink";
 import { Delete } from "@mui/icons-material";
-import { BlockItemSummaryInBlock } from "@concordium/web-sdk";
-import { parseContractAddress } from "../../../lib/common/common";
+import { BlockItemSummaryInBlock, RejectedInit } from "@concordium/web-sdk";
+import { parseContractAddress } from "../../lib/common/common";
+import rwaCompliance from "../../lib/rwaCompliance";
 
-export default function Initialize(props: { onSuccess: (contract: Contract) => void; complianceModules: Contract[] }) {
+export default function RwaComplianceInitialize(props: {
+	onSuccess: (contract: Contract) => void;
+	complianceModules: Contract[];
+}) {
 	const wallet = useWallet();
 	const [modules, setModules] = useState<ComplianceModule[]>([]);
 	const [name, setName] = useState<string>("");
@@ -63,7 +66,7 @@ export default function Initialize(props: { onSuccess: (contract: Contract) => v
 			props.onSuccess({
 				address,
 				name,
-				type: ContractType.Compliance,
+				type: ContractType.RwaCompliance,
 			});
 
 			resetState();
@@ -144,9 +147,13 @@ export default function Initialize(props: { onSuccess: (contract: Contract) => v
 				</Button>
 			</Paper>
 			<SendTransactionButton
-				onClick={() => initialize(wallet.provider!, wallet.currentAccount!, { modules })}
+				onClick={() =>
+					rwaCompliance.init.init(wallet.provider!, wallet.currentAccount!, {
+						modules: modules.map((m) => ({ index: Number(m.index), subindex: Number(m.subindex) })),
+					})
+				}
 				onFinalized={handleSuccess}
-				onFinalizedError={(r) => errorString(r)}
+				onFinalizedError={(r) => rwaCompliance.init.parseError(r as RejectedInit) || "Unknown Error"}
 				disabled={!isValid}>
 				Initialize Compliance Contract
 			</SendTransactionButton>

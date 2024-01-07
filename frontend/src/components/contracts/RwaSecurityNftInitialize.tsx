@@ -1,16 +1,16 @@
-import { BlockItemSummaryInBlock, ContractAddress } from "@concordium/web-sdk";
-import { Contract, ContractType } from "../ContractTypes";
+import { BlockItemSummaryInBlock, ContractAddress, RejectedInit } from "@concordium/web-sdk";
+import { Contract, ContractType } from "./ContractTypes";
 import { useState } from "react";
-import { parseContractAddress } from "../../../lib/common/common";
+import { parseContractAddress } from "../../lib/common/common";
 import { List, ListItem, ListItemButton, ListItemText, Paper, Stack, TextField, Typography } from "@mui/material";
-import { useWallet } from "../../WalletProvider";
-import ErrorDisplay from "../../common/ErrorDisplay";
-import SendTransactionButton from "../../common/SendTransactionButton";
-import ContractAddressField from "../../common/concordium/ContractAddressField";
-import { errorString, initialize } from "../../../lib/NftContract";
-import CCDScanContractLink from "../../common/concordium/CCDScanContractLink";
+import { useWallet } from "../WalletProvider";
+import ErrorDisplay from "../common/ErrorDisplay";
+import SendTransactionButton from "../common/SendTransactionButton";
+import ContractAddressField from "../common/concordium/ContractAddressField";
+import CCDScanContractLink from "../common/concordium/CCDScanContractLink";
+import rwaSecurityNft from "../../lib/rwaSecurityNft";
 
-export default function Initialize(props: {
+export default function RwaSecurityNftInitialize(props: {
 	onSuccess: (contract: Contract) => void;
 	identityRegistries: Contract[];
 	complianceContracts: Contract[];
@@ -41,7 +41,7 @@ export default function Initialize(props: {
 			props.onSuccess({
 				address,
 				name: form.contractDisplayName,
-				type: ContractType.Nft,
+				type: ContractType.RwaSecurityNft,
 			});
 			setError("");
 			setForm({
@@ -113,14 +113,20 @@ export default function Initialize(props: {
 			</Paper>
 			<SendTransactionButton
 				onClick={() =>
-					initialize(wallet.provider!, wallet.currentAccount!, {
-						identityRegistry: form.identityRegistry!,
-						compliance: form.complianceContract!,
+					rwaSecurityNft.init.init(wallet.provider!, wallet.currentAccount!, {
+						identity_registry: {
+							index: Number(form.identityRegistry!.index),
+							subindex: Number(form.identityRegistry!.subindex),
+						},
+						compliance: {
+							index: Number(form.complianceContract!.index),
+							subindex: Number(form.complianceContract!.subindex),
+						},
 						sponsors: [],
 					})
 				}
 				onFinalized={handleSuccess}
-				onFinalizedError={(r) => errorString(r)}
+				onFinalizedError={(r) => rwaSecurityNft.init.parseError(r as RejectedInit) || "Unknown Finalized error"}
 				disabled={!isFormValid()}>
 				Initialize Security NFT
 			</SendTransactionButton>

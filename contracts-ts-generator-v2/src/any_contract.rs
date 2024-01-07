@@ -2,8 +2,6 @@ use crate::contracts::{Contract, ContractInitMethod, ContractReceiveMethod};
 use concordium_std::schema::VersionedModuleSchema;
 
 pub fn create_contracts(module_ref: String, module_schema: VersionedModuleSchema) -> Vec<Contract> {
-
-
     let contracts: Vec<Contract> = match module_schema {
         VersionedModuleSchema::V0(v0) => v0
             .contracts
@@ -42,7 +40,7 @@ pub fn create_contracts(module_ref: String, module_schema: VersionedModuleSchema
                         name:       name.to_owned(),
                         error:      None,
                         response:   method_type.return_value().map(|t| t.to_owned()),
-                        is_mutable: true,
+                        is_mutable: method_type.return_value().is_none(),
                         request:    method_type.parameter().map(|t| t.to_owned()),
                     })
                     .collect(),
@@ -70,7 +68,7 @@ pub fn create_contracts(module_ref: String, module_schema: VersionedModuleSchema
                         name:       name.to_owned(),
                         error:      method_type.error().map(|t| t.to_owned()),
                         response:   method_type.return_value().map(|t| t.to_owned()),
-                        is_mutable: true,
+                        is_mutable: method_type.return_value().is_none(),
                         request:    method_type.parameter().map(|t| t.to_owned()),
                     })
                     .collect(),
@@ -102,7 +100,7 @@ pub fn create_contracts(module_ref: String, module_schema: VersionedModuleSchema
                         name:       name.to_owned(),
                         error:      method_type.error().map(|t| t.to_owned()),
                         response:   method_type.return_value().map(|t| t.to_owned()),
-                        is_mutable: true,
+                        is_mutable: method_type.return_value().is_none(),
                         request:    method_type.parameter().map(|t| t.to_owned()),
                     })
                     .collect(),

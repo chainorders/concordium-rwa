@@ -1,5 +1,15 @@
 import { Grid, List, ListItem, ListItemButton, ListItemText, Paper, Stack, Typography } from "@mui/material";
 import { Link, Outlet, useNavigate } from "react-router-dom";
+import { ContractType } from "./ContractTypes";
+import { capitalCase } from "change-case"
+
+const contractTypes: Record<string, ContractType> = {
+	rwaIdentityRegistry: ContractType.RwaIdentityRegistry,
+	complianceModule: ContractType.RwaComplianceModule,
+	compliance: ContractType.RwaCompliance,
+	rwaSecurityNft: ContractType.RwaSecurityNft,
+	sponsor: ContractType.RwaSponsor,
+};
 
 export default function ContractsLayout() {
 	const navigate = useNavigate();
@@ -13,26 +23,16 @@ export default function ContractsLayout() {
 							<Link to="/contracts">Contracts</Link>
 						</Typography>
 						<List>
-							<ListItem disablePadding disableGutters>
-								<ListItemButton onClick={() => navigate("init/IdentityRegistry")}>
-									<ListItemText primary="Initialize" secondary="Identity Registry" />
-								</ListItemButton>
-							</ListItem>
-							<ListItem disablePadding disableGutters>
-								<ListItemButton onClick={() => navigate("init/ComplianceModule/AllowedNationalities")}>
-									<ListItemText primary="Initialize" secondary="Compliance Module Nationalities Allow List" />
-								</ListItemButton>
-							</ListItem>
-							<ListItem disablePadding disableGutters>
-								<ListItemButton onClick={() => navigate("init/Compliance")}>
-									<ListItemText primary="Initialize" secondary="Compliance Contract" />
-								</ListItemButton>
-							</ListItem>
-							<ListItem disablePadding disableGutters>
-								<ListItemButton onClick={() => navigate("init/Nft")}>
-									<ListItemText primary="Initialize" secondary="Security NFT Contract" />
-								</ListItemButton>
-							</ListItem>
+							{Object.keys(contractTypes).map((key) => {
+								const contractType = contractTypes[key];
+								return (
+									<ListItem disablePadding disableGutters key={contractType}>
+										<ListItemButton onClick={() => navigate(`${contractType}/init`)}>
+											<ListItemText primary="Initialize" secondary={capitalCase(contractType)} />
+										</ListItemButton>
+									</ListItem>
+								);
+							})}
 						</List>
 					</Stack>
 				</Paper>

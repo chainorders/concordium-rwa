@@ -14,18 +14,17 @@ import {
 	ContractName,
 	Energy,
 	EntrypointName,
-	InvokeContractFailedResult,
+	InvokeContractResult,
 	ModuleReference,
 	ReceiveName,
+	RejectedInit,
+	RejectedReceive,
+	ReturnValue,
 	deserializeTypeValue,
 	serializeTypeValue,
 } from "@concordium/web-sdk";
-import { InvokeContractSuccessResult } from "./common/types";
 import { Buffer } from "buffer/";
-
-export const CONTRACT_NAME: ContractName.Type = ContractName.fromString(
-	import.meta.env.VITE_NFT_CONTRACT_NAME as string
-);
+import { ParsedError } from "./common/common";
 
 export class InitMethod<TIn> {
 	constructor(
@@ -61,23 +60,28 @@ export class InitMethod<TIn> {
 			schema
 		);
 	}
+
+	parseError: (value: RejectedInit) => string | undefined = (value) => {
+		return `Error Code: ${value.rejectReason}`;
+	};
 }
 
-export class ReceiveMethod<TIn, TOut = never> {
+export class ReceiveMethod<TIn, TOut = never, TErr = never> {
 	constructor(
 		public contractName: ContractName.Type,
 		public entrypoint: EntrypointName.Type,
 		public paramsSchemaBase64?: string,
 		public outSchemaBase64?: string,
+		public errorSchemaBase64?: string,
 		public maxExecutionEnergy: Energy.Type = Energy.create(30000)
 	) {}
 	async update(
 		provider: WalletApi,
 		account: AccountAddress.Type,
 		address: ContractAddress.Type,
-		params: TIn,
+		params?: TIn,
 		amount: CcdAmount.Type = CcdAmount.fromCcd(0)
-	) {
+	): Promise<string> {
 		const schema: SchemaSource | undefined = this.paramsSchemaBase64
 			? {
 					type: "parameter",
@@ -104,27 +108,43 @@ export class ReceiveMethod<TIn, TOut = never> {
 		provider: ConcordiumGRPCClient,
 		contract: ContractAddress.Type,
 		params?: TIn,
-		invoker?: AccountAddress.Type
-	): Promise<InvokeContractSuccessResult<TOut> | InvokeContractFailedResult> {
+		invoker?: AccountAddress.Type,
+		amount: CcdAmount.Type = CcdAmount.fromCcd(0)
+	): Promise<InvokeContractResult> {
 		const parameter = params && serializeTypeValue(params, Buffer.from(this.paramsSchemaBase64!, "base64"));
 
-		const result = await provider.invokeContract({
+		return await provider.invokeContract({
 			contract,
 			parameter: parameter ? parameter : undefined,
 			invoker,
-			method: ReceiveName.create(CONTRACT_NAME, this.entrypoint),
+			method: ReceiveName.create(this.contractName, this.entrypoint),
+			energy: this.maxExecutionEnergy,
+			amount,
 		});
-
-		switch (result.tag) {
-			case "success":
-				return {
-					...result,
-					returnValue: result.returnValue
-						? (deserializeTypeValue(result.returnValue.buffer, Buffer.from(this.outSchemaBase64!, "base64")) as TOut)
-						: undefined,
-				} as InvokeContractSuccessResult<TOut>;
-			case "failure":
-				return result;
-		}
 	}
+
+	parseError: (value: RejectedReceive) => ParsedError<TErr> | undefined = (value) => {
+		if (!this.errorSchemaBase64) {
+			return undefined;
+		}
+
+		let contents: TErr | undefined;
+		if (value.parameter) {
+			contents = deserializeTypeValue(value.parameter.buffer, Buffer.from(this.errorSchemaBase64!, "base64")) as TErr;
+			console.info("parseError", value, contents);
+		}
+
+		return {
+			message: `Error Code: ${value.rejectReason}`,
+			error: contents,
+		};
+	};
+
+	parseReturnValue: (value: ReturnValue.Type) => TOut | undefined = (value) => {
+		if (!this.outSchemaBase64) {
+			return undefined;
+		}
+
+		return deserializeTypeValue(value.buffer, Buffer.from(this.outSchemaBase64!, "base64")) as TOut;
+	};
 }

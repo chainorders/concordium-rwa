@@ -201,7 +201,7 @@ export default function SendTransactionButton(props: SendTransactionButtonProps)
 					),
 				}[state.type]
 			}
-			{state.error && <Typography color="error">{state.error}</Typography>}
+			{/* {state.error && <Typography color="error">{state.error}</Typography>} */}
 		</>
 	);
 }

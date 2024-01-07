@@ -42,7 +42,11 @@ pub fn remove_module(
     Ok(())
 }
 
-#[receive(contract = "rwa_compliance", name = "modules", parameter = "Address")]
+#[receive(
+    contract = "rwa_compliance",
+    name = "modules",
+    return_value = "Vec<ContractAddress>"
+)]
 pub fn modules(_: &ReceiveContext, host: &Host<State>) -> ContractResult<Vec<ContractAddress>> {
     Ok(host.state().modules())
 }

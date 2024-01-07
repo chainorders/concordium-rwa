@@ -4,15 +4,36 @@ import { AppBar, Box, MenuItem, Select, Toolbar, Typography } from "@mui/materia
 import Contracts from "./components/contracts/Contracts";
 import { ActionTypes, initialState, reducer } from "./AppState";
 import ContractsLayout from "./components/contracts/ContractsLayout";
-import { default as IdentityRegistryInitialize } from "./components/contracts/IdentityRegistry/Initialize";
 import ConcordiumWalletProvider, { useWallet } from "./components/WalletProvider";
 import ConcordiumNodeClientProvider from "./components/NodeClientProvider";
 import { Contract, ContractType } from "./components/contracts/ContractTypes";
 import ErrorDisplay from "./components/common/ErrorDisplay";
-import { default as ComplianceModuleAllowedNationalitiesInitialize } from "./components/contracts/compliance/modules/allowedNationalities/Initialize";
-import { default as ComplianceInitialize } from "./components/contracts/compliance/Initialize";
-import Initialize from "./components/contracts/securityNft/Initialize";
-import { default as ContractComponent } from "./components/contracts/Contract";
+import { default as RwaSecurityNftInitialize } from "./components/contracts/RwaSecurityNftInitialize";
+import ContractLayout from "./components/contracts/ContractLayout";
+import ConcordiumContract from "./components/contracts/ConcordiumContract";
+import {
+	ENTRYPOINTS as rwaSecurityNftEntrypoints,
+	ENTRYPOINT_DISPLAY_NAMES as rwaSecurityNftEntrypointNames,
+} from "./lib/rwaSecurityNft";
+import { ENTRYPOINTS_UI as rwaSecurityNftEntrypointsUI } from "./lib/rwaSecurityNftUi";
+import { default as IdentityRegistryInitialize } from "./components/contracts/RwaIdentityRegistryInitialize";
+import {
+	ENTRYPOINT_DISPLAY_NAMES as rwaIdentityRegistryEntrypointNames,
+	ENTRYPOINTS as rwaIdentityRegistryEntrypoints,
+} from "./lib/rwaIdentityRegistry";
+import { ENTRYPOINTS_UI as rwaIdentityRegistryEntrypointsUI } from "./lib/rwaIdentityRegistryUi";
+import { default as ComplianceInitialize } from "./components/contracts/RwaComplianceInitialize";
+import {
+	ENTRYPOINT_DISPLAY_NAMES as rwaComplianceEntrypointNames,
+	ENTRYPOINTS as rwaComplianceEntrypoints,
+} from "./lib/rwaCompliance";
+import { ENTRYPOINTS_UI as rwaComplianceEntrypointsUI } from "./lib/rwaComplianceUi";
+import { default as RWAComplianceModuleInitialize } from "./components/contracts/RwaComplianceModuleAllowedNationalitiesInitialize";
+import {
+	ENTRYPOINT_DISPLAY_NAMES as rwaComplianceModuleEntrypointNames,
+	ENTRYPOINTS as rwaComplianceModuleEntrypoints,
+} from "./lib/rwaComplianceModuleAllowedNationalities";
+import { ENTRYPOINTS_UI as rwaComplianceModuleEntrypointsUI } from "./lib/rwaComplianceModuleAllowedNationalitiesUi";
 
 // Header component
 function Header() {
@@ -88,42 +109,98 @@ function Layout() {
 						<Routes>
 							<Route path="contracts" element={<ContractsLayout />}>
 								<Route path="" element={<Contracts contracts={state.contracts} onDelete={onDeleteContract} />} />
-								<Route path="init">
+								<Route path={ContractType.RwaIdentityRegistry}>
+									<Route path="init" element={<IdentityRegistryInitialize onSuccess={onContractInitialized} />} />
+									<Route path=":index/:subIndex/*" element={<ContractLayout contracts={state.contracts} />}>
+										<Route
+											path="*"
+											element={
+												<ConcordiumContract
+													entrypoints={rwaIdentityRegistryEntrypoints}
+													entrypointDisplayNames={rwaIdentityRegistryEntrypointNames}
+													entrypointUi={rwaIdentityRegistryEntrypointsUI}
+												/>
+											}
+										/>
+									</Route>
+								</Route>
+								<Route path={ContractType.RwaCompliance}>
 									<Route
-										path="IdentityRegistry"
-										element={<IdentityRegistryInitialize onSuccess={onContractInitialized} />}
-									/>
-									<Route
-										path="ComplianceModule/AllowedNationalities"
-										element={
-											<ComplianceModuleAllowedNationalitiesInitialize
-												onSuccess={onContractInitialized}
-												identityRegistries={state.contracts.filter((c) => c.type == ContractType.IdentityRegistry)}
-											/>
-										}
-									/>
-									<Route
-										path="Compliance"
+										path="init"
 										element={
 											<ComplianceInitialize
 												onSuccess={onContractInitialized}
-												complianceModules={state.contracts.filter((c) => c.type == ContractType.ComplianceModule)}
+												complianceModules={state.contracts.filter((c) => c.type == ContractType.RwaComplianceModule)}
 											/>
 										}
 									/>
-									<Route
-										path="Nft"
-										element={
-											<Initialize
-												onSuccess={onContractInitialized}
-												complianceContracts={state.contracts.filter((c) => c.type == ContractType.Compliance)}
-												identityRegistries={state.contracts.filter((c) => c.type == ContractType.IdentityRegistry)}
-											/>
-										}
-									/>
-									<Route path="*" element={<ErrorDisplay text="Not Implemented: Work In Progress" />} />
+									<Route path=":index/:subIndex/*" element={<ContractLayout contracts={state.contracts} />}>
+										<Route
+											path="*"
+											element={
+												<ConcordiumContract
+													entrypoints={rwaComplianceEntrypoints}
+													entrypointDisplayNames={rwaComplianceEntrypointNames}
+													entrypointUi={rwaComplianceEntrypointsUI}
+												/>
+											}
+										/>
+									</Route>
 								</Route>
-								<Route path=":index/:subIndex/*" element={<ContractComponent contracts={state.contracts} />} />
+								<Route path={ContractType.RwaSecurityNft}>
+									<Route
+										path="init"
+										element={
+											<RwaSecurityNftInitialize
+												onSuccess={onContractInitialized}
+												identityRegistries={state.contracts.filter(
+													(contract) => contract.type === ContractType.RwaIdentityRegistry
+												)}
+												complianceContracts={state.contracts.filter(
+													(contract) => contract.type === ContractType.RwaCompliance
+												)}
+											/>
+										}
+									/>
+									<Route path=":index/:subIndex/*" element={<ContractLayout contracts={state.contracts} />}>
+										<Route
+											path="*"
+											element={
+												<ConcordiumContract
+													entrypoints={rwaSecurityNftEntrypoints}
+													entrypointDisplayNames={rwaSecurityNftEntrypointNames}
+													entrypointUi={rwaSecurityNftEntrypointsUI}
+												/>
+											}
+										/>
+									</Route>
+								</Route>
+								<Route path={ContractType.RwaComplianceModule}>
+									<Route
+										path="init"
+										element={
+											<RWAComplianceModuleInitialize
+												onSuccess={onContractInitialized}
+												identityRegistries={state.contracts.filter(
+													(contract) => contract.type === ContractType.RwaIdentityRegistry
+												)}
+											/>
+										}
+									/>
+									<Route path=":index/:subIndex/*" element={<ContractLayout contracts={state.contracts} />}>
+										<Route
+											path="*"
+											element={
+												<ConcordiumContract
+													entrypoints={rwaComplianceModuleEntrypoints}
+													entrypointDisplayNames={rwaComplianceModuleEntrypointNames}
+													entrypointUi={rwaComplianceModuleEntrypointsUI}
+												/>
+											}
+										/>
+									</Route>
+								</Route>
+
 								<Route path="*" element={<ErrorDisplay text="Not Found" />} />
 							</Route>
 							<Route path="*" element={<ErrorDisplay text="Not Found" />} />
