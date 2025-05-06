@@ -18,7 +18,7 @@ use super::web3_id_utils::VerifyPresentationResponse;
 
 /// Errors that can occur when interacting with the Identity Registry contract.
 #[derive(Debug)]
-pub enum Error {
+pub enum IdentityRegistryClientError {
     ParamsSerialization,
     AccountInfoQuery(v2::QueryError),
     TransactionSend(v2::RPCError),
@@ -31,28 +31,28 @@ pub enum Error {
     ExceedsParameterSize(ExceedsParameterSize),
 }
 
-impl From<v2::QueryError> for Error {
-    fn from(e: v2::QueryError) -> Self { Error::ClientQuery(e) }
+impl From<v2::QueryError> for IdentityRegistryClientError {
+    fn from(e: v2::QueryError) -> Self { IdentityRegistryClientError::ClientQuery(e) }
 }
 
-impl From<NewReceiveNameError> for Error {
-    fn from(e: NewReceiveNameError) -> Self { Error::ReceiveName(e) }
+impl From<NewReceiveNameError> for IdentityRegistryClientError {
+    fn from(e: NewReceiveNameError) -> Self { IdentityRegistryClientError::ReceiveName(e) }
 }
 
-impl From<RejectReason> for Error {
-    fn from(e: RejectReason) -> Self { Error::InvokeInstance(e) }
+impl From<RejectReason> for IdentityRegistryClientError {
+    fn from(e: RejectReason) -> Self { IdentityRegistryClientError::InvokeInstance(e) }
 }
 
-impl From<ParseError> for Error {
-    fn from(e: ParseError) -> Self { Error::Parse(e) }
+impl From<ParseError> for IdentityRegistryClientError {
+    fn from(e: ParseError) -> Self { IdentityRegistryClientError::Parse(e) }
 }
 
-impl From<v2::RPCError> for Error {
-    fn from(e: v2::RPCError) -> Self { Error::Rpc(e) }
+impl From<v2::RPCError> for IdentityRegistryClientError {
+    fn from(e: v2::RPCError) -> Self { IdentityRegistryClientError::Rpc(e) }
 }
 
-impl From<ExceedsParameterSize> for Error {
-    fn from(e: ExceedsParameterSize) -> Self { Error::ExceedsParameterSize(e) }
+impl From<ExceedsParameterSize> for IdentityRegistryClientError {
+    fn from(e: ExceedsParameterSize) -> Self { IdentityRegistryClientError::ExceedsParameterSize(e) }
 }
 
 /// A client for the Identity Registry contract.
@@ -82,10 +82,10 @@ impl IdentityRegistryClient {
         }
     }
 
-    pub async fn is_agent(&mut self, agent: &Address) -> Result<bool, Error> {
+    pub async fn is_agent(&mut self, agent: &Address) -> Result<bool, IdentityRegistryClientError> {
         let res = self
             .client
-            .view_raw::<bool, Error>(
+            .view_raw::<bool, IdentityRegistryClientError>(
                 "isAgent",
                 OwnedParameter::from_serial(agent).unwrap(),
                 BlockIdentifier::LastFinal,
@@ -103,10 +103,10 @@ impl IdentityRegistryClient {
     ///
     /// * A Result containing a vector of `ContractAddress`es representing the
     ///   issuers, or an `Error`.
-    pub async fn issuers(&mut self) -> Result<Vec<ContractAddress>, Error> {
+    pub async fn issuers(&mut self) -> Result<Vec<ContractAddress>, IdentityRegistryClientError> {
         let res = self
             .client
-            .view_raw::<Vec<ContractAddress>, Error>(
+            .view_raw::<Vec<ContractAddress>, IdentityRegistryClientError>(
                 "issuers",
                 OwnedParameter::empty(),
                 BlockIdentifier::LastFinal,
@@ -135,7 +135,7 @@ impl IdentityRegistryClient {
         address: Address,
         verification_response: VerifyPresentationResponse,
         energy: Energy,
-    ) -> Result<TransactionHash, Error> {
+    ) -> Result<TransactionHash, IdentityRegistryClientError> {
         let AccountInfo {
             account_nonce,
             ..
@@ -144,7 +144,7 @@ impl IdentityRegistryClient {
             .client
             .get_account_info(&agent.address.into(), BlockIdentifier::LastFinal)
             .await
-            .map_err(Error::AccountInfoQuery)?
+            .map_err(IdentityRegistryClientError::AccountInfoQuery)?
             .response;
         let register_identity_payload = RegisterIdentityParams {
             address,
@@ -158,7 +158,7 @@ impl IdentityRegistryClient {
                             value: value.to_string(),
                         })
                     })
-                    .collect::<Result<Vec<_>, Error>>()?,
+                    .collect::<Result<Vec<_>, IdentityRegistryClientError>>()?,
                 credentials: verification_response
                     .credentials
                     .iter()
@@ -171,7 +171,7 @@ impl IdentityRegistryClient {
         };
         let txn = self
             .client
-            .update::<_, Error>(
+            .update::<_, IdentityRegistryClientError>(
                 &agent.keys,
                 &ContractTransactionMetadata {
                     nonce:          account_nonce,

@@ -20,7 +20,7 @@ use concordium_rust_sdk::{
     web3id::{did::Network, Web3IdAttribute},
 };
 use futures::{StreamExt, TryStreamExt};
-use log::{debug, info};
+use log::{debug, info, warn};
 use poem::{
     listener::TcpListener,
     middleware::{AddData, Cors},
@@ -109,7 +109,10 @@ async fn create_server_routes(config: ApiConfig) -> anyhow::Result<impl poem::En
                 e
             ))
         })?;
-    assert!(is_agent, "provided agent wallet is not an agent in identity registry");
+    // assert!(is_agent, "provided agent wallet is not an agent in identity registry");
+    if !is_agent {
+        warn!("provided agent wallet is not an agent in identity registry");
+    }
 
     let now = chrono::Utc::now();
     let year = u64::try_from(now.year()).ok().unwrap();

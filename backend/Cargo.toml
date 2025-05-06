@@ -13,7 +13,8 @@ concordium-rwa-compliance = { path = "../contracts/compliance" }
 concordium-rwa-market = { path = "../contracts/market" }
 concordium-rwa-sponsor = { path = "../contracts/sponsor" }
 concordium-rwa-utils = { path = "../contracts/utils" }
-concordium-rust-sdk = "4.3.0"
+concordium-rust-sdk = "6.0.0"
+concordium-contracts-common = { version = "9.2.0" }
 tokio = { version = "1.35.1", features = ["full"] }
 anyhow = "1.0.79"
 futures = "0.3"
