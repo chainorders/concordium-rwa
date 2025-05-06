@@ -1,6 +1,6 @@
 use super::{
     db::{DbChallenge, VerifierDb},
-    identity_registry_client::{Error as IdentityRegistryError, IdentityRegistryClient},
+    identity_registry_client::{IdentityRegistryClient, IdentityRegistryClientError},
     web3_id_utils::{
         verify_presentation, CredStatement, GlobalContext, IdStatement, Presentation,
         VerifyPresentationError,
@@ -41,17 +41,14 @@ impl From<anyhow::Error> for VerifierApiError {
 impl From<AccountAddressParseError> for VerifierApiError {
     fn from(_: AccountAddressParseError) -> Self { Self::BadRequest }
 }
-impl From<bson::ser::Error> for VerifierApiError {
-    fn from(_: bson::ser::Error) -> Self { Self::BadRequest }
-}
 impl From<QueryError> for VerifierApiError {
     fn from(_: QueryError) -> Self { Self::InternalServer }
 }
 impl From<VerifyPresentationError> for VerifierApiError {
     fn from(_: VerifyPresentationError) -> Self { VerifierApiError::BadRequest }
 }
-impl From<IdentityRegistryError> for VerifierApiError {
-    fn from(_: IdentityRegistryError) -> Self { VerifierApiError::InternalServer }
+impl From<IdentityRegistryClientError> for VerifierApiError {
+    fn from(_: IdentityRegistryClientError) -> Self { VerifierApiError::InternalServer }
 }
 #[derive(Object)]
 pub struct GenerateChallengeRequest {
@@ -185,7 +182,7 @@ impl VerifierApi {
             &proof,
             challenge,
         )
-        .await?;
+        .await?/*Bad Request*/;
         debug!("Revealed Id Attributes: {:?}", verification_response.revealed_attributes);
         debug!("Credentials: {:?}", verification_response.credentials);
 
@@ -228,7 +225,7 @@ impl VerifierApi {
                 verification_response,
                 *max_energy,
             )
-            .await?;
+            .await?/*Internal Server Error*/;
 
         debug!("Register Identity Transaction Hash: {}", txn.to_string());
         Ok(Json(RegisterIdentityResponse {

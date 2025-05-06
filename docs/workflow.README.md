@@ -18,14 +18,14 @@ git clone git@github.com:chainorders/concordium-rwa.git
 git submodule update --init --recursive
 cd concordium-rwa
 yarn
-cp /home/parv0888/Downloads/3ab35yTaTTK8xr4jSBDBmMYAf9V8s5zVZAR86Rah1daX3uA39Q.export ./backend/verifier_wallet.export
-cp /home/parv0888/Downloads/3ab35yTaTTK8xr4jSBDBmMYAf9V8s5zVZAR86Rah1daX3uA39Q.export ./backend/sponsor_wallet.export
+cp /home/parv0888/Downloads/3ab35yTaTTK8xr4jSBDBmMYAf9V8s5zVZAR86Rah1daX3uA39Q.export ../backend/verifier_wallet.export
+cp /home/parv0888/Downloads/3ab35yTaTTK8xr4jSBDBmMYAf9V8s5zVZAR86Rah1daX3uA39Q.export ../backend/sponsor_wallet.export
 docker compose up -d
 ```
 
 ### VS Code
 
-* Update Starting Block hash in the [backend env file](./backend/.env). *this is an optional step if not set the system would start from current consensus block*
+* Update Starting Block hash in the [backend env file](../backend/.env). *this is an optional step if not set the system would start from current consensus block*
   * `STARTING_BLOCK_HASH`=ebcb1b1a919b6ef55b707e6eb8b373f587869820f263d3ae3db9878b470bed84
 
 * Generate Frontend Clients & Start the contract api
@@ -45,11 +45,11 @@ docker compose up -d
 
 * Selected Account `47fb97YAZtEEYNpaWz3ccrUCwqEnNfm2qQXiUGHEJ52Fiu7AVi`
 * Initialize Identity Registry : 8176
-* Add Identity Registry Agent take account address from the [wallet file](./backend/agent_wallet.export)
+* Add Identity Registry Agent take account address from the [wallet file](../backend/agent_wallet.export)
 
 ### VS Code
 
-* Update env variables in [backend env file](./backend/.env)
+* Update env variables in [backend env file](../backend/.env)
   * `IDENTITY_REGISTRY`
 
 ### Terminal
@@ -95,7 +95,7 @@ docker compose up -d
   * `VITE_NFT_SFT_CONTRACT_INDEX=8185`
   * `VITE_MARKET_CONTRACT_INDEX=8186`
   * `VITE_SPONSOR_CONTRACT_INDEX=8179`
-* Update [backend env variables](./backend/.env)
+* Update [backend env variables](../backend/.env)
   * `SPONSOR_CONTRACT=<8179,0>`
 
 ### Terminal
